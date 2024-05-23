@@ -42,7 +42,7 @@ class BlackjackRound:
     def start(self):
         self.deck.reset()
         self.player_cards = [self.deck.draw_card(), self.deck.draw_card()]
-        self.dealer_cards = [self.deck.draw_card(), self.deck.draw_card()]
+        self.dealer_cards = [self.deck.draw_card()]
 
     def hit(self):
         self.player_cards.append(self.deck.draw_card())

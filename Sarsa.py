@@ -38,7 +38,7 @@ class BlackjackRound:
     def start(self):
         self.deck.reset()
         self.player_cards = [self.deck.draw_card(), self.deck.draw_card()]
-        self.dealer_cards = [self.deck.draw_card(), self.deck.draw_card()]
+        self.dealer_cards = [self.deck.draw_card()]
 
     def hit(self):
         self.player_cards.append(self.deck.draw_card())
@@ -115,8 +115,8 @@ class Sarsa:
         td_error = td_target - self.Q[state][action]
         self.Q[state][action] += self.alpha * td_error
 
-        # Usage example with statistics output
-# Usage example with statistics output
+
+# four different configurations of epsilon
 episode = 1
 epsilons = [0.1, 1/episode, math.exp(-episode/1000), math.exp(-episode/10000)]
 
