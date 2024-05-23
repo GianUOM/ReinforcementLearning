@@ -40,19 +40,19 @@ class BlackjackRound:
             self.dealer_cards.append(self.deck.draw_card())
 
     def get_sum(self, cards):
-        sum = 0
+        total = 0
         has_ace = False
         for card in cards:
             if card.rank in ['J', 'Q', 'K']:
-                sum += 10
+                total += 10
             elif card.rank == 'A':
-                sum += 11
+                total += 11
                 has_ace = True
             else:
-                sum += int(card.rank)
-        if sum > 21 and has_ace:
-            sum -= 10
-        return sum
+                total += int(card.rank)
+        if total > 21 and has_ace:
+            total -= 10
+        return total
 
     def get_outcome(self):
         player_sum = self.get_sum(self.player_cards)
@@ -146,8 +146,11 @@ def monte_carlo_exploring_starts(num_episodes, alpha):
         for i in range(len(episode_actions)):
             state_action = (state, episode_actions[i])
             G = sum(episode_rewards[i:])
-            # No Q-values update in exploring starts
-            pass
+            if state not in agent.q_values:
+                agent.q_values[state] = {}
+            if episode_actions[i] not in agent.q_values[state]:
+                agent.q_values[state][episode_actions[i]] = 0
+            agent.q_values[state][episode_actions[i]] += alpha * (G - agent.q_values[state][episode_actions[i]])
 
     return agent.q_values
 
@@ -195,20 +198,20 @@ def monte_carlo_non_exploring_starts(num_episodes, alpha, epsilon_func):
         for i in range(len(episode_actions)):
             state_action = (state, episode_actions[i])
             G = sum(episode_rewards[i:])
-            # No Q-values update in non-exploring starts
-            pass
+            if state not in agent.q_values:
+                agent.q_values[state] = {}
+            if episode_actions[i] not in agent.q_values[state]:
+                agent.q_values[state][episode_actions[i]] = 0
+            agent.q_values[state][episode_actions[i]] += alpha * (G - agent.q_values[state][episode_actions[i]])
 
     return agent.q_values
 
 def run_episodes_and_extract_info(agent_function, num_episodes, alpha, epsilon_func):
     agent = RLAgent()
-    wins = 0
-    losses = 0
-    draws = 0
-    episode_results = {'Win': 0, 'Loss': 0, 'Draw': 0}
-    unique_state_action_pairs = set()  # Initialize a set to store unique state-action pairs
-    action_counts = {}  # Initialize a dictionary to store action counts
-    q_values = {}  # Initialize a dictionary to store Q values
+    episode_results = {'Win': [], 'Loss': [], 'Draw': []}
+    unique_state_action_pairs = set()
+    action_counts = {}
+    q_values = {}
     wins_per_episode = []
 
     for episode in range(1, num_episodes + 1):
@@ -250,220 +253,366 @@ def run_episodes_and_extract_info(agent_function, num_episodes, alpha, epsilon_f
             action = agent.choose_action(state, epsilon_func(episode))  # Use epsilon function
             episode_actions.append(action)
 
-            if episode_rewards and episode_rewards[-1] == 1:
-                wins_per_episode.append(1)
-            else:
-                wins_per_episode.append(0)
-
-            # Store unique state-action pairs
-            unique_state_action_pairs.add((state, action))
-
-            # Update action counts
-            state_action_pair = (state, action)
-            if state_action_pair in action_counts:
-                action_counts[state_action_pair] += 1
-            else:
-                action_counts[state_action_pair] = 1
-
-            # Update Q values
+        for i in range(len(episode_actions)):
+            state_action = (state, episode_actions[i])
+            G = sum(episode_rewards[i:])
             if state not in q_values:
                 q_values[state] = {}
-            if action not in q_values[state]:
-                q_values[state][action] = 0
-
-            # Update Q value using sample-based update rule
-            q_values[state][action] += alpha * (sum(episode_rewards) - q_values[state][action])
+            if episode_actions[i] not in q_values[state]:
+                q_values[state][episode_actions[i]] = 0
+            q_values[state][episode_actions[i]] += alpha * (G - q_values[state][episode_actions[i]])
 
         episode_result = round.get_outcome()
-        episode_results[episode_result] += 1
+        episode_results[episode_result].append(1)
+
+        if episode_result == 'Win':
+            wins_per_episode.append(1)
+        else:
+            wins_per_episode.append(0)
+
+        unique_state_action_pairs.add((state, action))
+
+        if (state, action) in action_counts:
+            action_counts[(state, action)] += 1
+        else:
+            action_counts[(state, action)] = 1
 
         if episode % 1000 == 0:
-            wins += episode_results['Win']
-            losses += episode_results['Loss']
-            draws += episode_results['Draw']
-            print(f"Episodes {episode-999}-{episode}: Wins - {episode_results['Win']}, Losses - {episode_results['Loss']}, Draws - {episode_results['Draw']}")
-            episode_results = {'Win': 0, 'Loss': 0, 'Draw': 0}
+            print(f"Episodes {episode-999}-{episode}: Wins - {sum(episode_results['Win'])}, Losses - {sum(episode_results['Loss'])}, Draws - {sum(episode_results['Draw'])}")
+            episode_results = {'Win': [], 'Loss': [], 'Draw': []}
 
+    return wins_per_episode, sum(episode_results['Win']), sum(episode_results['Loss']), sum(episode_results['Draw']), len(unique_state_action_pairs), action_counts, q_values
 
-    return wins_per_episode, wins, losses, draws, len(unique_state_action_pairs), action_counts, q_values
+def count_unique_state_action_pairs(action_counts):
+    valid_player_sums = list(range(12, 21))  # Valid player sums from 12 to 20
+    valid_dealer_cards = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A']
+    
+    unique_pairs = set()
+    
+    for (state, action) in action_counts.keys():
+        player_sum, dealer_card, has_ace = state
+        if player_sum in valid_player_sums and dealer_card in valid_dealer_cards:
+            unique_pairs.add((state, action))
+    
+    return len(unique_pairs)
+
 
 # Configuration 1: Exploring Starts
 num_episodes = 100000
 alpha = 0.1
-wins_per_episode, wins_explore, losses_explore, draws_explore, unique_pairs_explore, action_counts_explore, q_values_explore= run_episodes_and_extract_info(monte_carlo_exploring_starts, num_episodes, alpha, lambda k: 1 / k)
+wins_per_episode_explore, wins_explore, losses_explore, draws_explore, unique_pairs_explore, action_counts_explore, q_values_explore = run_episodes_and_extract_info(monte_carlo_exploring_starts, num_episodes, alpha, lambda k: 1 / k)
+unique_pairs_explore_refined = count_unique_state_action_pairs(action_counts_explore)
 
 # Configuration 2: Non-exploring Starts with 𝜖 = 1/k
 num_episodes = 100000
 alpha = 0.1
-wins_per_episode1, wins_non_explore_1, losses_non_explore_1, draws_non_explore_1, unique_pairs_non_explore_1, action_counts_non_explore_1, q_values_non_explore_1,  = run_episodes_and_extract_info(monte_carlo_non_exploring_starts, num_episodes, alpha, lambda k: 1 / k)
+wins_per_episode1, wins_non_explore_1, losses_non_explore_1, draws_non_explore_1, unique_pairs_non_explore_1, action_counts_non_explore_1, q_values_non_explore_1 = run_episodes_and_extract_info(monte_carlo_non_exploring_starts, num_episodes, alpha, lambda k: 1 / k)
+unique_pairs_non_explore_1_refined = count_unique_state_action_pairs(action_counts_non_explore_1)
 
 # Configuration 3: Non-exploring Starts with 𝜖 = e^(-k/1000)
 num_episodes = 100000
 alpha = 0.1
 wins_per_episode2, wins_non_explore_2, losses_non_explore_2, draws_non_explore_2, unique_pairs_non_explore_2, action_counts_non_explore_2, q_values_non_explore_2 = run_episodes_and_extract_info(monte_carlo_non_exploring_starts, num_episodes, alpha, lambda k: np.exp(-k / 1000))
+unique_pairs_non_explore_2_refined = count_unique_state_action_pairs(action_counts_non_explore_2)
 
 # Configuration 4: Non-exploring Starts with 𝜖 = e^(-k/10000)
 num_episodes = 100000
 alpha = 0.1
-wins_per_episode3, wins_non_explore_3, losses_non_explore_3, draws_non_explore_3, unique_pairs_non_explore_3, action_counts_non_explore_3, q_values_non_explore_3,  = run_episodes_and_extract_info(monte_carlo_non_exploring_starts, num_episodes, alpha, lambda k: np.exp(-k / 10000))
+wins_per_episode3, wins_non_explore_3, losses_non_explore_3, draws_non_explore_3, unique_pairs_non_explore_3, action_counts_non_explore_3, q_values_non_explore_3 = run_episodes_and_extract_info(monte_carlo_non_exploring_starts, num_episodes, alpha, lambda k: np.exp(-k / 10000))
+unique_pairs_non_explore_3_refined = count_unique_state_action_pairs(action_counts_non_explore_3)
 
+# Print results for exploring starts
 print('-----------------------------------------------------------------------')
-print("\nResults:\n")
-print("Exploring Starts:")
-print(f"Wins: {wins_explore}, Losses: {losses_explore}, Draws: {draws_explore}")
-print(f"Unique state-action pairs explored: {unique_pairs_explore}")
-print(f"Action counts for exploring starts: {action_counts_explore}")
-print(f"Estimated Q-Values for each unique state-action pair: {q_values_explore}\n")
+print("\nResults for Exploring Starts:\n")
+print("Wins: ", wins_explore)
+print("Losses: ", losses_explore)
+print("Draws: ", draws_explore)
+print("Unique state-action pairs explored: ", unique_pairs_explore_refined)
+print("\nCounts of state-action pair selections:")
+for state_action, count in action_counts_explore.items():
+    print(f"State-Action Pair: {state_action}, Count: {count}")
+print("\nEstimated Q values:")
+for state, actions in q_values_explore.items():
+    for action, value in actions.items():
+        print(f"State: {state}, Action: {action}, Q-value: {value}")
 
-print("Non-exploring Starts with 𝜖 = 1/k:")
-print(f"Wins: {wins_non_explore_1}, Losses: {losses_non_explore_1}, Draws: {draws_non_explore_1}")
-print(f"Unique state-action pairs explored: {unique_pairs_non_explore_1}")
-print(f"Action counts for non-exploring starts with 𝜖 = 1/k: {action_counts_non_explore_1}")
-print(f"Estimated Q-Values for each unique state-action pair: {q_values_explore}\n")
+# Print results for non-exploring starts with epsilon = 1/k
+print('-----------------------------------------------------------------------')
+print("\nResults for Non-exploring Starts with 𝜖 = 1/k:\n")
+print("Wins: ", wins_non_explore_1)
+print("Losses: ", losses_non_explore_1)
+print("Draws: ", draws_non_explore_1)
+print("Unique state-action pairs explored: ", unique_pairs_non_explore_1_refined)
+print("\nCounts of state-action pair selections:")
+for state_action, count in action_counts_non_explore_1.items():
+    print(f"State-Action Pair: {state_action}, Count: {count}")
+print("\nEstimated Q values:")
+for state, actions in q_values_non_explore_1.items():
+    for action, value in actions.items():
+        print(f"State: {state}, Action: {action}, Q-value: {value}")
 
-print("Non-exploring Starts with 𝜖 = e^(-k/1000):")
-print(f"Wins: {wins_non_explore_2}, Losses: {losses_non_explore_2}, Draws: {draws_non_explore_2}")
-print(f"Unique state-action pairs explored: {unique_pairs_non_explore_2}")
-print(f"Action counts for non-exploring starts with 𝜖 = e^(-k/1000): {action_counts_non_explore_2}")
-print(f"Estimated Q-Values for each unique state-action pair: {q_values_explore}\n")
+# Print results for non-exploring starts with epsilon = e^(-k/1000)
+print('-----------------------------------------------------------------------')
+print("\nResults for Non-exploring Starts with 𝜖 = e^(-k/1000):\n")
+print("Wins: ", wins_non_explore_2)
+print("Losses: ", losses_non_explore_2)
+print("Draws: ", draws_non_explore_2)
+print("Unique state-action pairs explored: ", unique_pairs_non_explore_2_refined)
+print("\nCounts of state-action pair selections:")
+for state_action, count in action_counts_non_explore_2.items():
+    print(f"State-Action Pair: {state_action}, Count: {count}")
+print("\nEstimated Q values:")
+for state, actions in q_values_non_explore_2.items():
+    for action, value in actions.items():
+        print(f"State: {state}, Action: {action}, Q-value: {value}")
 
-print("Non-exploring Starts with 𝜖 = e^(-k/10000):")
-print(f"Wins: {wins_non_explore_3}, Losses: {losses_non_explore_3}, Draws: {draws_non_explore_3}")
-print(f"Unique state-action pairs explored: {unique_pairs_non_explore_3}")
-print(f"Action counts for non-exploring starts with 𝜖 = e^(-k/10000): {action_counts_non_explore_3}")
-print(f"Estimated Q-Values for each unique state-action pair: {q_values_explore}\n")
+# Print results for non-exploring starts with epsilon = e^(-k/10000)
+print('-----------------------------------------------------------------------')
+print("\nResults for Non-exploring Starts with 𝜖 = e^(-k/10000):\n")
+print("Wins: ", wins_non_explore_3)
+print("Losses: ", losses_non_explore_3)
+print("Draws: ", draws_non_explore_3)
+print("Unique state-action pairs explored: ", unique_pairs_non_explore_3_refined)
+print("\nCounts of state-action pair selections:")
+for state_action, count in action_counts_non_explore_3.items():
+    print(f"State-Action Pair: {state_action}, Count: {count}")
+print("\nEstimated Q values:")
+for state, actions in q_values_non_explore_3.items():
+    for action, value in actions.items():
+        print(f"State: {state}, Action: {action}, Q-value: {value}")
 
+# Plotting Results for Exploring Starts
+interval = 20000
+wins_interval = [0]
+losses_interval = [0]
+draws_interval = [0]
 
+for i in range(interval, num_episodes + interval, interval):
+    wins_interval.append(sum(wins_per_episode_explore[:i]))
+    losses_interval.append(i - sum(wins_per_episode_explore[:i]))
+    draws_interval.append(0)
 
-# Plot the win count over episodes
-# totalEpisodes = range(1, num_episodes + 1)
-# plt.plot(totalEpisodes, wins_per_episode, label='Exploring Starts')
-# plt.plot(totalEpisodes, wins_per_episode1, label='Non-exploring Starts (𝜖 = 1/k)')
-# plt.plot(totalEpisodes, wins_per_episode2, label='Non-exploring Starts (𝜖 = e^(-k/1000))')
-# plt.plot(totalEpisodes, wins_per_episode3, label='Non-exploring Starts (𝜖 = e^(-k/10000))')
-# plt.yscale('log')
-# plt.xlabel('Number of Episodes')
-# plt.ylabel('Win Count')
-# plt.title('Win Count Over Episodes')
-# plt.legend()
-# plt.show()
-
-# def plot_state_action_counts(action_counts, title, top_n=10):
-#     sorted_counts = sorted(action_counts.items(), key=lambda x: x[1], reverse=True)[:top_n]
-#     state_action_pairs, counts = zip(*sorted_counts)
-#     plt.figure(figsize=(10, 6))
-#     plt.bar(range(len(state_action_pairs)), counts, color='skyblue', alpha=0.8)
-#     plt.xticks(range(len(state_action_pairs)), state_action_pairs, rotation=90, fontsize=10)
-#     plt.ylabel('Count', fontsize=12)
-#     plt.xlabel('State-Action Pair', fontsize=12)
-#     plt.title(title, fontsize=14)
-#     plt.grid(axis='y', linestyle='--', alpha=0.6)
-#     plt.tight_layout()
-#     plt.show()
-
-# # Configuration 1: Exploring Starts
-# plot_state_action_counts(action_counts_explore, "State-Action Counts for Exploring Starts")
-
-# # Configuration 2: Non-exploring Starts with 𝜖 = 1/k
-# plot_state_action_counts(action_counts_non_explore_1, "State-Action Counts for Non-Exploring Starts (𝜖 = 1/k)")
-
-# # Configuration 3: Non-exploring Starts with 𝜖 = e^(-k/1000)
-# plot_state_action_counts(action_counts_non_explore_2, "State-Action Counts for Non-Exploring Starts (𝜖 = e^(-k/1000))")
-
-# # Configuration 4: Non-exploring Starts with 𝜖 = e^(-k/10000)
-# plot_state_action_counts(action_counts_non_explore_3, "State-Action Counts for Non-Exploring Starts (𝜖 = e^(-k/10000))")
-
-# Aggregate unique state-action pairs counts for each algorithm
-# unique_pairs_explore_all = unique_pairs_explore
-# unique_pairs_non_explore_1_all = unique_pairs_non_explore_1
-# unique_pairs_non_explore_2_all = unique_pairs_non_explore_2
-# unique_pairs_non_explore_3_all = unique_pairs_non_explore_3
-
-# # Plot the total number of unique state-action pairs across all configurations
-# def plot_unique_state_action_pairs(unique_pairs, title):
-#     plt.bar(range(len(unique_pairs)), unique_pairs.values(), color='skyblue', alpha=0.8)
-#     plt.xticks(range(len(unique_pairs)), unique_pairs.keys())
-#     plt.xlabel('Configuration')
-#     plt.ylabel('Total Unique State-Action Pairs')
-#     plt.title(title)
-#     plt.show()
-
-# plot_unique_state_action_pairs({
-#     "Exploring Starts": unique_pairs_explore_all,
-#     "Non-exploring Starts (𝜖 = 1/k)": unique_pairs_non_explore_1_all,
-#     "Non-exploring Starts (𝜖 = e^(-k/1000))": unique_pairs_non_explore_2_all,
-#     "Non-exploring Starts (𝜖 = e^(-k/10000))": unique_pairs_non_explore_3_all
-# }, "Total Unique State-Action Pairs Across Configurations")
-
-# def get_best_action(player_sum, dealer_card, ace, q_values):
-#     state = (player_sum, dealer_card, ace)
-#     if state in q_values:
-#         hit_value = q_values[state].get('HIT', float('-inf'))
-#         stand_value = q_values[state].get('STAND', float('-inf'))
-#         if hit_value > stand_value:
-#             return 'HIT'
-#         elif stand_value > hit_value:
-#             return 'STAND'
-#         else:
-#             return 'HIT' if random.random() < 0.5 else 'STAND'  # Randomly choose between HIT and STAND if values are equal
-#     else:
-#         return 'HIT'  # Default to HIT if state not found in Q-values
+plt.figure(figsize=(10, 6))
+plt.plot(range(0, num_episodes + 1, interval), wins_interval, label='Wins', marker='o', color='blue')
+plt.plot(range(0, num_episodes + 1, interval), losses_interval, label='Losses', marker='o', color='red')
+plt.plot(range(0, num_episodes + 1, interval), draws_interval, label='Draws', marker='o', color='green')
+plt.xlabel('Number of Episodes')
+plt.ylabel('Results')
+plt.title('Results for Exploring Starts Configuration')
+plt.legend()
+plt.grid(True)
+plt.show()
 
 
-# def build_strategy_tables(q_values):
-#     strategy_tables = []
+# Plotting Results for Non-exploring Starts with 𝜖 = 1/k
+interval = 20000
+wins_interval = [0]
+losses_interval = [0]
+draws_interval = [0]
 
-#     for ace in [True, False]:
-#         strategy_table = {}
+for i in range(interval, num_episodes + interval, interval):
+    wins_interval.append(sum(wins_per_episode1[:i]))
+    losses_interval.append(i - sum(wins_per_episode1[:i]))
+    draws_interval.append(0)
 
-#         for player_sum in range(20, 11, -1):
-#             strategy_table[player_sum] = {}
-
-#             for dealer_card in range(2, 11):
-#                 best_action = get_best_action(player_sum, dealer_card, ace, q_values)
-#                 strategy_table[player_sum][dealer_card] = best_action
-
-#             # Handle Ace as 11
-#             if ace:
-#                 best_action = get_best_action(player_sum, 'A', ace, q_values)
-#                 strategy_table[player_sum]['A'] = best_action
-
-#         strategy_tables.append(strategy_table)
-
-#     return strategy_tables
-
-# # Example usage:
-# strategy_tables_explore = build_strategy_tables(q_values_explore)
-# strategy_tables_non_explore_1 = build_strategy_tables(q_values_non_explore_1)
-# strategy_tables_non_explore_2 = build_strategy_tables(q_values_non_explore_2)
-# strategy_tables_non_explore_3 = build_strategy_tables(q_values_non_explore_3)
+plt.figure(figsize=(10, 6))
+plt.plot(range(0, num_episodes + 1, interval), wins_interval, label='Wins', marker='o', color='blue')
+plt.plot(range(0, num_episodes + 1, interval), losses_interval, label='Losses', marker='o', color='red')
+plt.plot(range(0, num_episodes + 1, interval), draws_interval, label='Draws', marker='o', color='green')
+plt.xlabel('Number of Episodes')
+plt.ylabel('Results')
+plt.title('Results for Non-exploring Starts with 𝜖 = 1/k Configuration')
+plt.legend()
+plt.grid(True)
+plt.show()
 
 
+# Plotting Results for Non-exploring Starts with 𝜖 = e^(-k/1000)
+interval = 20000
+wins_interval = [0]
+losses_interval = [0]
+draws_interval = [0]
 
-# def print_strategy_table(strategy_table, has_ace):
-#     ace_status = "with Ace" if has_ace else "without Ace"
-#     print(f"Blackjack Strategy Table {ace_status}:")
-#     print("Dealer's Card: ", end="")
-#     for dealer_card in range(2, 11):
-#         print(f"{dealer_card} ", end="")
-#     print("A")
-#     for player_sum in range(20, 11, -1):
-#         print(f"{player_sum}: ", end="")
-#         for dealer_card in range(2, 11):
-#             print(strategy_table[player_sum].get(dealer_card, ''), end=" ")
-#         print(strategy_table[player_sum].get('A', ''))
-#     print()
+for i in range(interval, num_episodes + interval, interval):
+    wins_interval.append(sum(wins_per_episode2[:i]))
+    losses_interval.append(i - sum(wins_per_episode2[:i]))
+    draws_interval.append(0)
 
-# # Print strategy tables for each configuration
-# for i, strategy_tables in enumerate([strategy_tables_explore, strategy_tables_non_explore_1, strategy_tables_non_explore_2, strategy_tables_non_explore_3]):
-#     print(f"Configuration {i+1}:")
-#     for ace in [True, False]:
-#         print_strategy_table(strategy_tables[ace], ace)
+plt.figure(figsize=(10, 6))
+plt.plot(range(0, num_episodes + 1, interval), wins_interval, label='Wins', marker='o', color='blue')
+plt.plot(range(0, num_episodes + 1, interval), losses_interval, label='Losses', marker='o', color='red')
+plt.plot(range(0, num_episodes + 1, interval), draws_interval, label='Draws', marker='o', color='green')
+plt.xlabel('Number of Episodes')
+plt.ylabel('Results')
+plt.title('Results for Non-exploring Starts with 𝜖 = e^(-k/1000) Configuration')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+
+# Plotting Results for Non-exploring Starts with 𝜖 = e^(-k/10000)
+interval = 20000
+wins_interval = [0]
+losses_interval = [0]
+draws_interval = [0]
+
+for i in range(interval, num_episodes + interval, interval):
+    wins_interval.append(sum(wins_per_episode3[:i]))
+    losses_interval.append(i - sum(wins_per_episode3[:i]))
+    draws_interval.append(0)
+
+plt.figure(figsize=(10, 6))
+plt.plot(range(0, num_episodes + 1, interval), wins_interval, label='Wins', marker='o', color='blue')
+plt.plot(range(0, num_episodes + 1, interval), losses_interval, label='Losses', marker='o', color='red')
+plt.plot(range(0, num_episodes + 1, interval), draws_interval, label='Draws', marker='o', color='green')
+plt.xlabel('Number of Episodes')
+plt.ylabel('Results')
+plt.title('Results for Non-exploring Starts with 𝜖 = e^(-k/10000) Configuration')
+plt.legend()
+plt.grid(True)
+plt.show()
 
 
 
+def plot_action_counts(action_counts, title):
+    valid_player_sums = list(range(12, 21))  # Valid player sums from 12 to 20
+    valid_dealer_cards = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A']
+    
+    # Filter action counts to include only valid state-action pairs
+    filtered_action_counts = {
+        state_action: count for state_action, count in action_counts.items()
+        if state_action[0][0] in valid_player_sums and state_action[0][1] in valid_dealer_cards
+    }
+    
+    sorted_action_counts = sorted(filtered_action_counts.items(), key=lambda x: x[1], reverse=True)
+    states_actions, counts = zip(*sorted_action_counts)
 
+    plt.figure(figsize=(20, 10))  # Increase figure size
+    plt.bar(range(len(states_actions)), counts)
+    plt.xlabel('State-Action Pairs')
+    plt.ylabel('Counts') 
+    plt.title(title)
+    plt.tight_layout()  # Adjust layout
+    plt.show()
 
+# Plotting each configuration
+plot_action_counts(action_counts_explore, 'Counts of State-Action Pairs: Exploring Starts')
+plot_action_counts(action_counts_non_explore_1, 'Counts of State-Action Pairs: Non-exploring Starts (𝜖 = 1/k)')
+plot_action_counts(action_counts_non_explore_2, 'Counts of State-Action Pairs: Non-exploring Starts (𝜖 = e^(-k/1000))')
+plot_action_counts(action_counts_non_explore_3, 'Counts of State-Action Pairs: Non-exploring Starts (𝜖 = e^(-k/10000))')
+
+configurations = ['Exploring Starts', 'Non-exploring Starts (1/k)', 'Non-exploring Starts (e^(-k/1000))', 'Non-exploring Starts (e^(-k/10000))']
+unique_pairs_counts = [unique_pairs_explore_refined, unique_pairs_non_explore_1_refined, unique_pairs_non_explore_2_refined, unique_pairs_non_explore_3_refined]
+
+plt.figure(figsize=(10, 6))
+plt.bar(configurations, unique_pairs_counts, color=['blue', 'orange', 'green', 'red'])
+plt.xlabel('Algorithm Configurations')
+plt.ylabel('Number of Unique State-Action Pairs')
+plt.yticks(np.arange(0, max(unique_pairs_counts) + 50, 50))  # Set y-axis interval to 50
+plt.title('Total Number of Unique State-Action Pairs Across Configurations')
+plt.show()
+
+def build_strategy_table(q_values, has_ace):
+    # Define the dealer cards and player sums
+    dealer_cards = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A']
+    player_sums = list(range(20, 11, -1))
+    
+    # Initialize the strategy table
+    strategy_table = {sum_: {dealer_card: '' for dealer_card in dealer_cards} for sum_ in player_sums}
+
+    # Fill the strategy table
+    for player_sum in player_sums:
+        for dealer_card in dealer_cards:
+            state = (player_sum, dealer_card, has_ace)
+            if state in q_values:
+                best_action = max(q_values[state], key=q_values[state].get)
+                strategy_table[player_sum][dealer_card] = 'H' if best_action == 'HIT' else 'S'
+            else:
+                strategy_table[player_sum][dealer_card] = 'N/A'  # If state is not in q_values
+    
+    return strategy_table
+
+def print_strategy_table(strategy_table, title):
+    print(title)
+    print("Player Sum | " + " | ".join(strategy_table[20].keys()))
+    print("-" * (11 * len(strategy_table[20].keys()) + 12))
+    for player_sum, actions in strategy_table.items():
+        actions_str = " | ".join(actions[dealer_card] for dealer_card in actions)
+        print(f"    {player_sum}    | {actions_str}")
+
+# Generate strategy tables for each configuration
+configs = [
+    ("Exploring Starts", q_values_explore),
+    ("Non-exploring Starts with 𝜖 = 1/k", q_values_non_explore_1),
+    ("Non-exploring Starts with 𝜖 = e^(-k/1000)", q_values_non_explore_2),
+    ("Non-exploring Starts with 𝜖 = e^(-k/10000)", q_values_non_explore_3)
+]
+
+for config_name, q_values in configs:
+    # Strategy tables for player with an Ace as 11
+    strategy_table_ace = build_strategy_table(q_values, has_ace=True)
+    print_strategy_table(strategy_table_ace, f"Strategy Table with Ace as 11 - {config_name}")
+    
+    # Strategy tables for player without an Ace as 11
+    strategy_table_no_ace = build_strategy_table(q_values, has_ace=False)
+    print_strategy_table(strategy_table_no_ace, f"Strategy Table without Ace as 11 - {config_name}")
+
+def calculate_means_and_advantage(wins_per_episode, last_n=10000):
+    # Extract the last N episodes
+    last_wins = wins_per_episode[-last_n:]
+    
+    # Calculate the number of wins and losses in the last N episodes
+    wins = sum(last_wins)
+    losses = last_n - wins
+    draws = 0  # Draws are not recorded in wins_per_episode, so they are 0
+    
+    # Calculate the means
+    mean_wins = wins / last_n
+    mean_losses = losses / last_n
+    mean_draws = draws / last_n
+    
+    # Calculate the dealer's advantage
+    advantage = (mean_losses - mean_wins) / (mean_losses + mean_wins)
+    
+    return mean_wins, mean_losses, mean_draws, advantage
+
+# Results for each configuration
+configs = [
+    ("Exploring Starts", wins_per_episode_explore),
+    ("Non-exploring Starts with 𝜖 = 1/k", wins_per_episode1),
+    ("Non-exploring Starts with 𝜖 = e^(-k/1000)", wins_per_episode2),
+    ("Non-exploring Starts with 𝜖 = e^(-k/10000)", wins_per_episode3)
+]
+
+advantages = []
+
+for config_name, wins_per_episode in configs:
+    # Calculate means and dealer's advantage
+    mean_wins, mean_losses, mean_draws, advantage = calculate_means_and_advantage(wins_per_episode)
+    
+    # Print results
+    print(f"\nResults for {config_name} (last 10,000 episodes):")
+    print(f"Mean Wins: {mean_wins:.4f}")
+    print(f"Mean Losses: {mean_losses:.4f}")
+    print(f"Mean Draws: {mean_draws:.4f}")
+    print(f"Dealer's Advantage: {advantage:.4f}")
+    
+    # Store advantage for plotting
+    advantages.append(advantage)
+
+# Plotting the dealer advantage for all configurations
+config_names = [config[0] for config in configs]
+plt.figure(figsize=(10, 6))
+plt.bar(config_names, advantages, color=['blue', 'orange', 'green', 'red'])
+plt.xlabel('Algorithm Configurations')
+plt.ylabel('Dealer\'s Advantage')
+plt.title('Dealer Advantage Across Different Algorithm Configurations')
+plt.show()
+
+# Find the configuration with the minimum dealer advantage
+min_advantage_index = advantages.index(min(advantages))
+min_advantage_config = config_names[min_advantage_index]
+print(f"\nThe algorithm that minimizes the dealer advantage the most is: {min_advantage_config}")
 
 
 
