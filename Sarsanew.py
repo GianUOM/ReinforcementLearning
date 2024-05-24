@@ -117,7 +117,7 @@ def sarsa(num_of_episodes, alpha, epsilon):
         episode_actions = []
         episode_rewards = []
 
-        # Initial action selection
+        
         action = agent.choose_action(state, epsilon)
 
         while True:
@@ -165,6 +165,8 @@ def run_episodes(agent_function, num_of_episodes, alpha, epsilon_func):
     action_counts = {}
     q_values = {}
     wins_per_episode = []
+    losses_per_episode = []
+    draws_per_episode = []
 
     for episode in range(1, num_of_episodes + 1):
         round = BlackjackRound()
@@ -173,7 +175,7 @@ def run_episodes(agent_function, num_of_episodes, alpha, epsilon_func):
         episode_actions = []
         episode_rewards = []
 
-        action = agent.choose_action(state, epsilon_func(episode))  # Use epsilon function
+        action = agent.choose_action(state, epsilon_func(episode))  
         episode_actions.append(action)
 
         while True:
@@ -202,7 +204,7 @@ def run_episodes(agent_function, num_of_episodes, alpha, epsilon_func):
             next_state = agent.generate_agent_state(round.get_sum(round.player_cards), round.dealer_cards[0].rank, 'A' in [card.rank for card in round.player_cards])
             state = next_state
 
-            action = agent.choose_action(state, epsilon_func(episode))  # Use epsilon function
+            action = agent.choose_action(state, epsilon_func(episode))  
             episode_actions.append(action)
 
         for i in range(len(episode_actions)):
@@ -219,8 +221,16 @@ def run_episodes(agent_function, num_of_episodes, alpha, epsilon_func):
 
         if episode_result == 'Win':
             wins_per_episode.append(1)
+            losses_per_episode.append(0)
+            draws_per_episode.append(0)
+        elif episode_result == 'Loss':
+            wins_per_episode.append(0)
+            losses_per_episode.append(1)
+            draws_per_episode.append(0)
         else:
             wins_per_episode.append(0)
+            losses_per_episode.append(0)
+            draws_per_episode.append(1)
 
         unique_state_action_pairs.add((state, action))
 
@@ -233,11 +243,10 @@ def run_episodes(agent_function, num_of_episodes, alpha, epsilon_func):
             print(f"Episodes {episode-999}-{episode}: Wins - {sum(episode_results['Win'])}, Losses - {sum(episode_results['Loss'])}, Draws - {sum(episode_results['Draw'])}")
             episode_results = {'Win': [], 'Loss': [], 'Draw': []}
 
-    return wins_per_episode, sum(episode_results['Win']), sum(episode_results['Loss']), sum(episode_results['Draw']), len(unique_state_action_pairs), action_counts, q_values
-
+    return wins_per_episode, draws_per_episode, losses_per_episode, sum(episode_results['Win']), sum(episode_results['Loss']), sum(episode_results['Draw']), len(unique_state_action_pairs), action_counts, q_values
 
 def count_unique_state_action_pairs(action_counts):
-    valid_player_sums = list(range(12, 21))  # Valid player sums from 12 to 20
+    valid_player_sums = list(range(12, 21))  
     valid_dealer_cards = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A']
     
     unique_pairs = set()
@@ -250,32 +259,31 @@ def count_unique_state_action_pairs(action_counts):
     return len(unique_pairs)
 
 
-
-# Configuration 1: epsilon = 0.1
 num_of_episodes = 100000
 alpha = 0.1
-wins_per_episode_config1, wins_config1, losses_config1, draws_config1, unique_pairs_config1, action_counts_config1, q_values_config1 = run_episodes(sarsa, num_of_episodes, alpha, lambda k: 0.1)
+wins_per_episode_sansa_1, draws_per_episode_sansa1, losses_per_episode_sansa1, wins_config1, losses_config1, draws_config1, unique_pairs_config1, action_counts_config1, q_values_config1 = run_episodes(sarsa, num_of_episodes, alpha, lambda k: 0.1)
 unique_pairs_config1_refined = count_unique_state_action_pairs(action_counts_config1)
 
-# Configuration 2: epsilon = 1/k
+
 num_of_episodes = 100000
 alpha = 0.1
-wins_per_episode_config2, wins_config2, losses_config2, draws_config2, unique_pairs_config2, action_counts_config2, q_values_config2 = run_episodes(sarsa, num_of_episodes, alpha, lambda k: 1 / k)
+wins_per_episode_sansa_2, draws_per_episode_sansa2, losses_per_episode_sansa2, wins_config2, losses_config2, draws_config2, unique_pairs_config2, action_counts_config2, q_values_config2 = run_episodes(sarsa, num_of_episodes, alpha, lambda k: 1 / k)
 unique_pairs_config2_refined = count_unique_state_action_pairs(action_counts_config2)
 
-# Configuration 3: epsilon = e^(-k/1000)
+
 num_of_episodes = 100000
 alpha = 0.1
-wins_per_episode_config3, wins_config3, losses_config3, draws_config3, unique_pairs_config3, action_counts_config3, q_values_config3 = run_episodes(sarsa, num_of_episodes, alpha, lambda k: np.exp(-k / 1000))
+wins_per_episode_sansa_3, draws_per_episode_sansa3, losses_per_episode_sansa3, wins_config3, losses_config3, draws_config3, unique_pairs_config3, action_counts_config3, q_values_config3 = run_episodes(sarsa, num_of_episodes, alpha, lambda k: np.exp(-k / 1000))
 unique_pairs_config3_refined = count_unique_state_action_pairs(action_counts_config3)
 
-# Configuration 4: epsilon = e^(-k/10000)
+
 num_of_episodes = 100000
 alpha = 0.1
-wins_per_episode_config4, wins_config4, losses_config4, draws_config4, unique_pairs_config4, action_counts_config4, q_values_config4 = run_episodes(sarsa, num_of_episodes, alpha, lambda k: np.exp(-k / 10000))
+wins_per_episode_sansa_4, draws_per_episode_sansa4, losses_per_episode_sansa4, wins_config4, losses_config4, draws_config4, unique_pairs_config4, action_counts_config4, q_values_config4 = run_episodes(sarsa, num_of_episodes, alpha, lambda k: np.exp(-k / 10000))
 unique_pairs_config4_refined = count_unique_state_action_pairs(action_counts_config4)
 
-# Print results for config1
+
+
 print('-----------------------------------------------------------------------')
 print("\nResults for epsilon = 0.1:\n")
 print("Wins: ", wins_config1)
@@ -290,7 +298,7 @@ for state, actions in q_values_config1.items():
     for action, value in actions.items():
         print(f"State: {state}, Action: {action}, Q-value: {value}")
 
-# Print results for config2
+
 print('-----------------------------------------------------------------------')
 print("\nResults for epsilon = 1/k:\n")
 print("Wins: ", wins_config2)
@@ -305,7 +313,7 @@ for state, actions in q_values_config2.items():
     for action, value in actions.items():
         print(f"State: {state}, Action: {action}, Q-value: {value}")
 
-# Print results for config3
+
 print('-----------------------------------------------------------------------')
 print("\nResults for epsilon = e^(-k/1000):\n")
 print("Wins: ", wins_config3)
@@ -320,7 +328,7 @@ for state, actions in q_values_config3.items():
     for action, value in actions.items():
         print(f"State: {state}, Action: {action}, Q-value: {value}")
 
-# Print results for config4
+
 print('-----------------------------------------------------------------------')
 print("\nResults for epsilon = e^(-k/10000):\n")
 print("Wins: ", wins_config4)
@@ -336,7 +344,7 @@ for state, actions in q_values_config4.items():
         print(f"State: {state}, Action: {action}, Q-value: {value}")
 
 
-# Print results for config1
+
 print('-----------------------------------------------------------------------')
 print("\nResults for epsilon = 0.1:\n")
 print("Wins: ", wins_config1)
@@ -351,7 +359,7 @@ for state, actions in q_values_config1.items():
     for action, value in actions.items():
         print(f"State: {state}, Action: {action}, Q-value: {value}")
 
-# Print results for config2
+
 print('-----------------------------------------------------------------------')
 print("\nResults for epsilon = 1/k:\n")
 print("Wins: ", wins_config2)
@@ -366,7 +374,7 @@ for state, actions in q_values_config2.items():
     for action, value in actions.items():
         print(f"State: {state}, Action: {action}, Q-value: {value}")
 
-# Print results for config3
+
 print('-----------------------------------------------------------------------')
 print("\nResults for epsilon = e^(-k/1000):\n")
 print("Wins: ", wins_config3)
@@ -381,7 +389,7 @@ for state, actions in q_values_config3.items():
     for action, value in actions.items():
         print(f"State: {state}, Action: {action}, Q-value: {value}")
 
-# Print results for config4
+
 print('-----------------------------------------------------------------------')
 print("\nResults for epsilon = e^(-k/10000):\n")
 print("Wins: ", wins_config4)
@@ -403,8 +411,8 @@ losses_interval = [0]
 draws_interval = [0]
 
 for i in range(interval, num_of_episodes + interval, interval):
-    wins_interval.append(sum(wins_per_episode_config1[:i]))
-    losses_interval.append(i - sum(wins_per_episode_config1[:i]))
+    wins_interval.append(sum(wins_per_episode_sansa_1[:i]))
+    losses_interval.append(i - sum(wins_per_episode_sansa_1[:i]))
     draws_interval.append(0)
 
 plt.figure(figsize=(10, 6))
@@ -425,8 +433,8 @@ losses_interval = [0]
 draws_interval = [0]
 
 for i in range(interval, num_of_episodes + interval, interval):
-    wins_interval.append(sum(wins_per_episode_config2[:i]))
-    losses_interval.append(i - sum(wins_per_episode_config2[:i]))
+    wins_interval.append(sum(wins_per_episode_sansa_2[:i]))
+    losses_interval.append(i - sum(wins_per_episode_sansa_2[:i]))
     draws_interval.append(0)
 
 plt.figure(figsize=(10, 6))
@@ -447,8 +455,8 @@ losses_interval = [0]
 draws_interval = [0]
 
 for i in range(interval, num_of_episodes + interval, interval):
-    wins_interval.append(sum(wins_per_episode_config3[:i]))
-    losses_interval.append(i - sum(wins_per_episode_config3[:i]))
+    wins_interval.append(sum(wins_per_episode_sansa_3[:i]))
+    losses_interval.append(i - sum(wins_per_episode_sansa_3[:i]))
     draws_interval.append(0)
 
 plt.figure(figsize=(10, 6))
@@ -469,8 +477,8 @@ losses_interval = [0]
 draws_interval = [0]
 
 for i in range(interval, num_of_episodes + interval, interval):
-    wins_interval.append(sum(wins_per_episode_config4[:i]))
-    losses_interval.append(i - sum(wins_per_episode_config4[:i]))
+    wins_interval.append(sum(wins_per_episode_sansa_4[:i]))
+    losses_interval.append(i - sum(wins_per_episode_sansa_4[:i]))
     draws_interval.append(0)
 
 plt.figure(figsize=(10, 6))
@@ -483,8 +491,6 @@ plt.title('Results for epsilon = e^(-k/10000) Configuration')
 plt.legend()
 plt.grid(True)
 plt.show()
-
-
 
 def plot_action_counts(action_counts, title):
     valid_player_sums = list(range(12, 21))  
@@ -506,7 +512,7 @@ def plot_action_counts(action_counts, title):
     plt.tight_layout()  
     plt.show()
 
-# Plotting each configuration
+
 plot_action_counts(action_counts_config1, 'Counts of State-Action Pairs: epsilon = 0.1')
 plot_action_counts(action_counts_config2, 'Counts of State-Action Pairs: (epsilon = 1/k)')
 plot_action_counts(action_counts_config3, 'Counts of State-Action Pairs: (epsilon = e^(-k/1000))')
@@ -519,7 +525,7 @@ plt.figure(figsize=(10, 6))
 plt.bar(configurations, unique_pairs_counts, color=['blue', 'orange', 'green', 'red'])
 plt.xlabel('Algorithm Configurations')
 plt.ylabel('Number of Unique State-Action Pairs')
-plt.yticks(np.arange(0, max(unique_pairs_counts) + 50, 50))  # Set y-axis interval to 50
+plt.yticks(np.arange(0, max(unique_pairs_counts) + 50, 50))  
 plt.title('Total Number of Unique State-Action Pairs Across Configurations')
 plt.show()
 
@@ -527,10 +533,10 @@ def build_strategy_table(q_values, has_ace):
     dealer_cards = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A']
     player_sums = list(range(20, 11, -1))
     
-    # Initialize the strategy table
+    
     strategy_table = {sum_: {dealer_card: '' for dealer_card in dealer_cards} for sum_ in player_sums}
 
-    # Fill the strategy table
+    
     for player_sum in player_sums:
         for dealer_card in dealer_cards:
             state = (player_sum, dealer_card, has_ace)
@@ -538,7 +544,7 @@ def build_strategy_table(q_values, has_ace):
                 best_action = max(q_values[state], key=q_values[state].get)
                 strategy_table[player_sum][dealer_card] = 'H' if best_action == 'HIT' else 'S'
             else:
-                strategy_table[player_sum][dealer_card] = 'N/A'  # If state is not in q_values
+                strategy_table[player_sum][dealer_card] = 'N/A'  
     
     return strategy_table
 
@@ -550,7 +556,7 @@ def print_strategy_table(strategy_table, title):
         actions_str = " | ".join(actions[dealer_card] for dealer_card in actions)
         print(f"    {player_sum}    | {actions_str}")
 
-# Generate strategy tables for each configuration
+
 configs = [
     ("epsilon = 0.1", q_values_config1),
     ("epsilon = 1/k", q_values_config2),
@@ -559,11 +565,11 @@ configs = [
 ]
 
 for config_name, q_values in configs:
-    # Strategy tables for player with an Ace as 11
+    
     strategy_table_ace = build_strategy_table(q_values, has_ace=True)
     print_strategy_table(strategy_table_ace, f"Strategy Table with Ace as 11 - {config_name}")
     
-    # Strategy tables for player without an Ace as 11
+    
     strategy_table_no_ace = build_strategy_table(q_values, has_ace=False)
     print_strategy_table(strategy_table_no_ace, f"Strategy Table without Ace as 11 - {config_name}")
 
