@@ -1,6 +1,8 @@
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+from Sarsanew import *
+from Qlearningnew import *
 
 class Card:
     def __init__(self, rank, suit):
@@ -386,7 +388,7 @@ def plot_actionCounts(actionCounts, title):
     sorted_actionCounts = sorted(filtered_actionCounts.items(), key=lambda x: x[1], reverse=True)
     states_actions, counts = zip(*sorted_actionCounts)
 
-    plt.figure(figsize=(20, 10))  
+    plt.figure(figsize=(30, 20))  
     plt.bar(range(len(states_actions)), counts)
     plt.xlabel('State-Action Pairs')
     plt.ylabel('Counts') 
@@ -450,13 +452,14 @@ def compare_dealer_advantage(configurations, advantages):
     min_advantage_config = configurations[min_advantage_index]
 
     
-    plt.figure(figsize=(10, 6))
-    bars = plt.bar(configurations, advantages, color=['blue', 'orange', 'green', 'red'])
+    plt.figure(figsize=(20, 10))
+    bars = plt.bar(configurations, advantages, color=['blue', 'orange', 'green', 'red', 'purple', 'brown', 'pink', 'gray', 'olive', 'cyan', 'magenta', 'yellow'])
 
     plt.xlabel('Algorithm Configurations')
     plt.ylabel("Dealer's Advantage")
     plt.title('Dealer Advantage Across Different Algorithm Configurations')
     plt.grid(True)
+    plt.xticks(rotation = 45, ha = 'center', fontsize = 10)
     plt.show()
 
     print(f"\nThe algorithm that minimizes the dealer advantage the most is: {min_advantage_config}")
@@ -488,22 +491,38 @@ for config_name, q_values in configs:
     print_strategy_table(strategy_table_no_ace, f"Strategy Table without Ace as 11 - {config_name}")
 
 
-total_winsExploring_last_10000, total_lossesExploring_last_10000, total_drawsExploring_last_10000 = analyze_last_10000_episodes(winsPerEpisode_explore, lossesPerEpisode_explore, drawsPerEpisode_explore, 'Exploring Starts')
-total_winsNonExploring1_last_10000, total_lossesNonExploring1_last_10000, total_drawsNonExploring1_last_10000 = analyze_last_10000_episodes(winsPerEpisode1, lossesPerEpisode1, drawsPerEpisode1, 'Non-exploring Starts with 𝜖 = 1/k')
-total_winsNonExploring2_last_10000, total_lossesNonExploring2_last_10000, total_drawsNonExploring2_last_10000 = analyze_last_10000_episodes(winsPerEpisode2, lossesPerEpisode2, drawsPerEpisode2, 'Non-exploring Starts with 𝜖 = e^(-k/1000)')
-total_winsNonExploring3_last_10000, total_lossesNonExploring3_last_10000, total_drawsNonExploring3_last_10000 = analyze_last_10000_episodes(winsPerEpisode3, lossesPerEpisode3, drawsPerEpisode3, 'Non-exploring Starts with 𝜖 = e^(-k/10000)')
+# Calculate and analyze for each configuration
+configurations = [
+    "Exploring Starts",
+    "Non-exploring Starts (1/k)",
+    "Non-exploring Starts (e^(-k/1000))",
+    "Non-exploring Starts (e^(-k/10000))",
+    "SARSA (epsilon = 0.1)",
+    "SARSA (epsilon = 1/k)",
+    "SARSA (epsilon = e^(-k/1000))",
+    "SARSA (epsilon = e^(-k/10000))",
+    "Q-Learning (epsilon = 0.1)",
+    "Q-Learning (epsilon = 1/k)",
+    "Q-Learning (epsilon = e^(-k/1000))",
+    "Q-Learning (epsilon = e^(-k/10000))"
+]
 
-dealer_advantage_explore = calculate_dealer_advantage(total_winsExploring_last_10000, total_lossesExploring_last_10000)
-dealer_advantage_non_explore_1 = calculate_dealer_advantage(total_winsNonExploring1_last_10000, total_lossesNonExploring1_last_10000)
-dealer_advantage_non_explore_2 = calculate_dealer_advantage(total_winsNonExploring2_last_10000, total_lossesNonExploring2_last_10000)
-dealer_advantage_non_explore_3 = calculate_dealer_advantage(total_winsNonExploring3_last_10000, total_lossesNonExploring3_last_10000)
+results = [
+    analyze_last_10000_episodes(winsPerEpisode_explore, lossesPerEpisode_explore, drawsPerEpisode_explore, 'Exploring Starts'),
+    analyze_last_10000_episodes(winsPerEpisode1, lossesPerEpisode1, drawsPerEpisode1, 'Non-exploring Starts with 𝜖 = 1/k'),
+    analyze_last_10000_episodes(winsPerEpisode2, lossesPerEpisode2, drawsPerEpisode2, 'Non-exploring Starts with 𝜖 = e^(-k/1000)'),
+    analyze_last_10000_episodes(winsPerEpisode3, lossesPerEpisode3, drawsPerEpisode3, 'Non-exploring Starts with 𝜖 = e^(-k/10000)'),
+    analyze_last_10000_episodes(wins_per_episode_config1, losses_per_episode_sansa1, draws_per_episode_sansa1, 'SARSA (epsilon = 0.1)'),
+    analyze_last_10000_episodes(wins_per_episode_config2, losses_per_episode_sansa2, draws_per_episode_sansa2, 'SARSA (epsilon = 1/k)'),
+    analyze_last_10000_episodes(wins_per_episode_config3, losses_per_episode_sansa3, draws_per_episode_sansa3, 'SARSA (epsilon = e^(-k/1000))'),
+    analyze_last_10000_episodes(wins_per_episode_config4, losses_per_episode_sansa4, draws_per_episode_sansa4, 'SARSA (epsilon = e^(-k/10000))'),
+    analyze_last_10000_episodes(wins_per_episode_config1, losses_per_episode_config1, draws_per_episode_config1, 'Q-Learning (epsilon = 0.1)'),
+    analyze_last_10000_episodes(wins_per_episode_config2, losses_per_episode_config2, draws_per_episode_config2, 'Q-Learning (epsilon = 1/k)'),
+    analyze_last_10000_episodes(wins_per_episode_config3, losses_per_episode_config3, draws_per_episode_config3, 'Q-Learning (epsilon = e^(-k/1000))'),
+    analyze_last_10000_episodes(wins_per_episode_config4, losses_per_episode_config4, draws_per_episode_config4, 'Q-Learning (epsilon = e^(-k/10000))')
+]
 
-print(f"Exploring Starts - Dealer's Advantage: {dealer_advantage_explore:.4f}")
-print(f"Non-exploring Starts with 𝜖 = 1/k - Dealer's Advantage: {dealer_advantage_non_explore_1:.4f}")
-print(f"Non-exploring Starts with 𝜖 = e^(-k/1000) - Dealer's Advantage: {dealer_advantage_non_explore_2:.4f}")
-print(f"Non-exploring Starts with 𝜖 = e^(-k/10000) - Dealer's Advantage: {dealer_advantage_non_explore_3:.4f}")
+advantages = [calculate_dealer_advantage(total_wins, total_losses) for total_wins, total_losses, total_draws in results]
 
-configurations = ['Exploring Starts', 'Non-exploring Starts (1/k)', 'Non-exploring Starts (e^(-k/1000))', 'Non-exploring Starts (e^(-k/10000))']
-advantages = [dealer_advantage_explore, dealer_advantage_non_explore_1, dealer_advantage_non_explore_2, dealer_advantage_non_explore_3]
-
+# Compare dealer advantage
 compare_dealer_advantage(configurations, advantages)
