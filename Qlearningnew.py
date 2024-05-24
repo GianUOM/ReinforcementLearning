@@ -102,17 +102,16 @@ class RLAgentQLearning:
 
 epsilon_func = 0.1
 
-def qlearning(num_episodes, alpha, gamma, epsilon):
+def qlearning(num_of_episodes, alpha, gamma, epsilon):
 
     agent = RLAgentQLearning()
-    for episode in range(num_episodes):
+    for episode in range(num_of_episodes):
         round = BlackjackRound()
         round.start()
         state = agent.generate_agent_state(round.get_sum(round.player_cards), round.dealer_cards[0].rank, 'A' in [card.rank for card in round.player_cards])
         episode_actions = []
         episode_rewards = []
 
-        # Initial action selection
         action = agent.choose_action(state, epsilon)
 
         while True:
@@ -141,33 +140,33 @@ def qlearning(num_episodes, alpha, gamma, epsilon):
             next_state = agent.generate_agent_state(round.get_sum(round.player_cards), round.dealer_cards[0].rank, 'A' in [card.rank for card in round.player_cards])
             state = next_state
 
-            action = agent.choose_action(state, epsilon_func(episode+1))  # Use epsilon function
+            action = agent.choose_action(state, epsilon_func(episode+1))  
             episode_actions.append(action)
 
-
-            # Update Q-values
             agent.update_q_values(state, action, episode_rewards, next_state, alpha)
 
             state = next_state      
         
     return agent.q_values
 
-def run_episodes_and_extract_info(agent_function, num_episodes, alpha, epsilon_func):
+def run_episodes(agent_function, num_of_episodes, alpha, epsilon_func):
     agent = RLAgentQLearning()
     episode_results = {'Win': [], 'Loss': [], 'Draw': []}
     unique_state_action_pairs = set()
     action_counts = {}
     q_values = {}
     wins_per_episode = []
+    losses_per_episode = []
+    draws_per_episode = []
 
-    for episode in range(1, num_episodes + 1):
+    for episode in range(1, num_of_episodes + 1):
         round = BlackjackRound()
         round.start()
         state = agent.generate_agent_state(round.get_sum(round.player_cards), round.dealer_cards[0].rank, 'A' in [card.rank for card in round.player_cards])
         episode_actions = []
         episode_rewards = []
 
-        action = agent.choose_action(state, epsilon_func(episode))  # Use epsilon function
+        action = agent.choose_action(state, epsilon_func(episode))  
         episode_actions.append(action)
 
         while True:
@@ -196,7 +195,7 @@ def run_episodes_and_extract_info(agent_function, num_episodes, alpha, epsilon_f
             next_state = agent.generate_agent_state(round.get_sum(round.player_cards), round.dealer_cards[0].rank, 'A' in [card.rank for card in round.player_cards])
             state = next_state
 
-            action = agent.choose_action(state, epsilon_func(episode))  # Use epsilon function
+            action = agent.choose_action(state, epsilon_func(episode))  
             episode_actions.append(action)
 
         for i in range(len(episode_actions)):
@@ -213,8 +212,16 @@ def run_episodes_and_extract_info(agent_function, num_episodes, alpha, epsilon_f
 
         if episode_result == 'Win':
             wins_per_episode.append(1)
+            losses_per_episode.append(0)
+            draws_per_episode.append(0)
+        elif episode_result == 'Loss':
+            wins_per_episode.append(0)
+            losses_per_episode.append(1)
+            draws_per_episode.append(0)
         else:
             wins_per_episode.append(0)
+            losses_per_episode.append(0)
+            draws_per_episode.append(1)
 
         unique_state_action_pairs.add((state, action))
 
@@ -227,11 +234,10 @@ def run_episodes_and_extract_info(agent_function, num_episodes, alpha, epsilon_f
             print(f"Episodes {episode-999}-{episode}: Wins - {sum(episode_results['Win'])}, Losses - {sum(episode_results['Loss'])}, Draws - {sum(episode_results['Draw'])}")
             episode_results = {'Win': [], 'Loss': [], 'Draw': []}
 
-    return wins_per_episode, sum(episode_results['Win']), sum(episode_results['Loss']), sum(episode_results['Draw']), len(unique_state_action_pairs), action_counts, q_values
-
+    return wins_per_episode, draws_per_episode, losses_per_episode, sum(episode_results['Win']), sum(episode_results['Loss']), sum(episode_results['Draw']), len(unique_state_action_pairs), action_counts, q_values
 
 def count_unique_state_action_pairs(action_counts):
-    valid_player_sums = list(range(12, 21))  # Valid player sums from 12 to 20
+    valid_player_sums = list(range(12, 21))  
     valid_dealer_cards = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A']
     
     unique_pairs = set()
@@ -244,167 +250,166 @@ def count_unique_state_action_pairs(action_counts):
     return len(unique_pairs)
 
 
-
-# Configuration 1: epsilon = 0.1
-num_episodes = 100000
+num_of_episodes = 100000
 alpha = 0.1
-wins_per_episode_explore, wins_explore, losses_explore, draws_explore, unique_pairs_explore, action_counts_explore, q_values_explore = run_episodes_and_extract_info(qlearning, num_episodes, alpha, lambda k: 0.1)
-unique_pairs_explore_refined = count_unique_state_action_pairs(action_counts_explore)
+wins_per_episode_config1, draws_per_episode_config1, losses_per_episode_config1, wins_config1, losses_config1, draws_config1, unique_pairs_config1, action_counts_config1, q_values_config1 = run_episodes(qlearning, num_of_episodes, alpha, lambda k: 0.1)
+unique_pairs_config1_refined = count_unique_state_action_pairs(action_counts_config1)
 
-# Configuration 2: epsilon = 1/k
-num_episodes = 100000
+
+num_of_episodes = 100000
 alpha = 0.1
-wins_per_episode1, wins_non_explore_1, losses_non_explore_1, draws_non_explore_1, unique_pairs_non_explore_1, action_counts_non_explore_1, q_values_non_explore_1 = run_episodes_and_extract_info(qlearning, num_episodes, alpha, lambda k: 1 / k)
-unique_pairs_non_explore_1_refined = count_unique_state_action_pairs(action_counts_non_explore_1)
+wins_per_episode_config2, draws_per_episode_config2, losses_per_episode_config2, wins_config2, losses_config2, draws_config2, unique_pairs_config2, action_counts_config2, q_values_config2 = run_episodes(qlearning, num_of_episodes, alpha, lambda k: 1 / k)
+unique_pairs_config2_refined = count_unique_state_action_pairs(action_counts_config2)
 
-# Configuration 3: epsilon = e^(-k/1000)
-num_episodes = 100000
+
+num_of_episodes = 100000
 alpha = 0.1
-wins_per_episode2, wins_non_explore_2, losses_non_explore_2, draws_non_explore_2, unique_pairs_non_explore_2, action_counts_non_explore_2, q_values_non_explore_2 = run_episodes_and_extract_info(qlearning, num_episodes, alpha, lambda k: np.exp(-k / 1000))
-unique_pairs_non_explore_2_refined = count_unique_state_action_pairs(action_counts_non_explore_2)
+wins_per_episode_config3, draws_per_episode_config3, losses_per_episode_config3, wins_config3, losses_config3, draws_config3, unique_pairs_config3, action_counts_config3, q_values_config3 = run_episodes(qlearning, num_of_episodes, alpha, lambda k: np.exp(-k / 1000))
+unique_pairs_config3_refined = count_unique_state_action_pairs(action_counts_config3)
 
-# Configuration 4: epsilon = e^(-k/10000)
-num_episodes = 100000
+
+num_of_episodes = 100000
 alpha = 0.1
-wins_per_episode3, wins_non_explore_3, losses_non_explore_3, draws_non_explore_3, unique_pairs_non_explore_3, action_counts_non_explore_3, q_values_non_explore_3 = run_episodes_and_extract_info(qlearning, num_episodes, alpha, lambda k: np.exp(-k / 10000))
-unique_pairs_non_explore_3_refined = count_unique_state_action_pairs(action_counts_non_explore_3)
+wins_per_episode_config4, draws_per_episode_config4, losses_per_episode_config4, wins_config4, losses_config4, draws_config4, unique_pairs_config4, action_counts_config4, q_values_config4 = run_episodes(qlearning, num_of_episodes, alpha, lambda k: np.exp(-k / 10000))
+unique_pairs_config4_refined = count_unique_state_action_pairs(action_counts_config4)
 
-# Print results for epsilon = 0.1
+
+
 print('-----------------------------------------------------------------------')
 print("\nResults for epsilon = 0.1:\n")
-print("Wins: ", wins_explore)
-print("Losses: ", losses_explore)
-print("Draws: ", draws_explore)
-print("Unique state-action pairs explored: ", unique_pairs_explore_refined)
+print("Wins: ", wins_config1)
+print("Losses: ", losses_config1)
+print("Draws: ", draws_config1)
+print("Unique state-action pairs explored: ", unique_pairs_config1_refined)
 print("\nCounts of state-action pair selections:")
-for state_action, count in action_counts_explore.items():
+for state_action, count in action_counts_config1.items():
     print(f"State-Action Pair: {state_action}, Count: {count}")
 print("\nEstimated Q values:")
-for state, actions in q_values_explore.items():
+for state, actions in q_values_config1.items():
     for action, value in actions.items():
         print(f"State: {state}, Action: {action}, Q-value: {value}")
 
-# Print results epsilon = 1/k
+
 print('-----------------------------------------------------------------------')
 print("\nResults for epsilon = 1/k:\n")
-print("Wins: ", wins_non_explore_1)
-print("Losses: ", losses_non_explore_1)
-print("Draws: ", draws_non_explore_1)
-print("Unique state-action pairs explored: ", unique_pairs_non_explore_1_refined)
+print("Wins: ", wins_config2)
+print("Losses: ", losses_config2)
+print("Draws: ", draws_config2)
+print("Unique state-action pairs explored: ", unique_pairs_config2_refined)
 print("\nCounts of state-action pair selections:")
-for state_action, count in action_counts_non_explore_1.items():
+for state_action, count in action_counts_config2.items():
     print(f"State-Action Pair: {state_action}, Count: {count}")
 print("\nEstimated Q values:")
-for state, actions in q_values_non_explore_1.items():
+for state, actions in q_values_config2.items():
     for action, value in actions.items():
         print(f"State: {state}, Action: {action}, Q-value: {value}")
 
-# Print results for epsilon = e^(-k/1000)
+
 print('-----------------------------------------------------------------------')
 print("\nResults for epsilon = e^(-k/1000):\n")
-print("Wins: ", wins_non_explore_2)
-print("Losses: ", losses_non_explore_2)
-print("Draws: ", draws_non_explore_2)
-print("Unique state-action pairs explored: ", unique_pairs_non_explore_2_refined)
+print("Wins: ", wins_config3)
+print("Losses: ", losses_config3)
+print("Draws: ", draws_config3)
+print("Unique state-action pairs explored: ", unique_pairs_config3_refined)
 print("\nCounts of state-action pair selections:")
-for state_action, count in action_counts_non_explore_2.items():
+for state_action, count in action_counts_config3.items():
     print(f"State-Action Pair: {state_action}, Count: {count}")
 print("\nEstimated Q values:")
-for state, actions in q_values_non_explore_2.items():
+for state, actions in q_values_config3.items():
     for action, value in actions.items():
         print(f"State: {state}, Action: {action}, Q-value: {value}")
 
-# Print results for epsilon = e^(-k/10000)
+
 print('-----------------------------------------------------------------------')
 print("\nResults for epsilon = e^(-k/10000):\n")
-print("Wins: ", wins_non_explore_3)
-print("Losses: ", losses_non_explore_3)
-print("Draws: ", draws_non_explore_3)
-print("Unique state-action pairs explored: ", unique_pairs_non_explore_3_refined)
+print("Wins: ", wins_config4)
+print("Losses: ", losses_config4)
+print("Draws: ", draws_config4)
+print("Unique state-action pairs explored: ", unique_pairs_config4_refined)
 print("\nCounts of state-action pair selections:")
-for state_action, count in action_counts_non_explore_3.items():
+for state_action, count in action_counts_config4.items():
     print(f"State-Action Pair: {state_action}, Count: {count}")
 print("\nEstimated Q values:")
-for state, actions in q_values_non_explore_3.items():
+for state, actions in q_values_config4.items():
     for action, value in actions.items():
         print(f"State: {state}, Action: {action}, Q-value: {value}")
 
 
-# Print results for epsilon = 0.1
+
 print('-----------------------------------------------------------------------')
 print("\nResults for epsilon = 0.1:\n")
-print("Wins: ", wins_explore)
-print("Losses: ", losses_explore)
-print("Draws: ", draws_explore)
-print("Unique state-action pairs explored: ", unique_pairs_explore_refined)
+print("Wins: ", wins_config1)
+print("Losses: ", losses_config1)
+print("Draws: ", draws_config1)
+print("Unique state-action pairs explored: ", unique_pairs_config1_refined)
 print("\nCounts of state-action pair selections:")
-for state_action, count in action_counts_explore.items():
+for state_action, count in action_counts_config1.items():
     print(f"State-Action Pair: {state_action}, Count: {count}")
 print("\nEstimated Q values:")
-for state, actions in q_values_explore.items():
+for state, actions in q_values_config1.items():
     for action, value in actions.items():
         print(f"State: {state}, Action: {action}, Q-value: {value}")
 
-# Print results for epsilon = 1/k
+
 print('-----------------------------------------------------------------------')
 print("\nResults for epsilon = 1/k:\n")
-print("Wins: ", wins_non_explore_1)
-print("Losses: ", losses_non_explore_1)
-print("Draws: ", draws_non_explore_1)
-print("Unique state-action pairs explored: ", unique_pairs_non_explore_1_refined)
+print("Wins: ", wins_config2)
+print("Losses: ", losses_config2)
+print("Draws: ", draws_config2)
+print("Unique state-action pairs explored: ", unique_pairs_config2_refined)
 print("\nCounts of state-action pair selections:")
-for state_action, count in action_counts_non_explore_1.items():
+for state_action, count in action_counts_config2.items():
     print(f"State-Action Pair: {state_action}, Count: {count}")
 print("\nEstimated Q values:")
-for state, actions in q_values_non_explore_1.items():
+for state, actions in q_values_config2.items():
     for action, value in actions.items():
         print(f"State: {state}, Action: {action}, Q-value: {value}")
 
-# Print results for epsilon = e^(-k/1000)
+
 print('-----------------------------------------------------------------------')
 print("\nResults for epsilon = e^(-k/1000):\n")
-print("Wins: ", wins_non_explore_2)
-print("Losses: ", losses_non_explore_2)
-print("Draws: ", draws_non_explore_2)
-print("Unique state-action pairs explored: ", unique_pairs_non_explore_2_refined)
+print("Wins: ", wins_config3)
+print("Losses: ", losses_config3)
+print("Draws: ", draws_config3)
+print("Unique state-action pairs explored: ", unique_pairs_config3_refined)
 print("\nCounts of state-action pair selections:")
-for state_action, count in action_counts_non_explore_2.items():
+for state_action, count in action_counts_config3.items():
     print(f"State-Action Pair: {state_action}, Count: {count}")
 print("\nEstimated Q values:")
-for state, actions in q_values_non_explore_2.items():
+for state, actions in q_values_config3.items():
     for action, value in actions.items():
         print(f"State: {state}, Action: {action}, Q-value: {value}")
 
-# Print results for  epsilon = e^(-k/10000)
+
 print('-----------------------------------------------------------------------')
 print("\nResults for epsilon = e^(-k/10000):\n")
-print("Wins: ", wins_non_explore_3)
-print("Losses: ", losses_non_explore_3)
-print("Draws: ", draws_non_explore_3)
-print("Unique state-action pairs explored: ", unique_pairs_non_explore_3_refined)
+print("Wins: ", wins_config4)
+print("Losses: ", losses_config4)
+print("Draws: ", draws_config4)
+print("Unique state-action pairs explored: ", unique_pairs_config4_refined)
 print("\nCounts of state-action pair selections:")
-for state_action, count in action_counts_non_explore_3.items():
+for state_action, count in action_counts_config4.items():
     print(f"State-Action Pair: {state_action}, Count: {count}")
 print("\nEstimated Q values:")
-for state, actions in q_values_non_explore_3.items():
+for state, actions in q_values_config4.items():
     for action, value in actions.items():
         print(f"State: {state}, Action: {action}, Q-value: {value}")
 
-# Plotting Results for epsilon = 0.1
+
 interval = 20000
 wins_interval = [0]
 losses_interval = [0]
 draws_interval = [0]
 
-for i in range(interval, num_episodes + interval, interval):
-    wins_interval.append(sum(wins_per_episode_explore[:i]))
-    losses_interval.append(i - sum(wins_per_episode_explore[:i]))
+for i in range(interval, num_of_episodes + interval, interval):
+    wins_interval.append(sum(wins_per_episode_config1[:i]))
+    losses_interval.append(i - sum(wins_per_episode_config1[:i]))
     draws_interval.append(0)
 
 plt.figure(figsize=(10, 6))
-plt.plot(range(0, num_episodes + 1, interval), wins_interval, label='Wins', marker='o', color='blue')
-plt.plot(range(0, num_episodes + 1, interval), losses_interval, label='Losses', marker='o', color='red')
-plt.plot(range(0, num_episodes + 1, interval), draws_interval, label='Draws', marker='o', color='green')
+plt.plot(range(0, num_of_episodes + 1, interval), wins_interval, label='Wins', marker='o', color='blue')
+plt.plot(range(0, num_of_episodes + 1, interval), losses_interval, label='Losses', marker='o', color='red')
+plt.plot(range(0, num_of_episodes + 1, interval), draws_interval, label='Draws', marker='o', color='green')
 plt.xlabel('Number of Episodes')
 plt.ylabel('Results')
 plt.title('Results for epsilon = 0.1 Configuration')
@@ -413,21 +418,20 @@ plt.grid(True)
 plt.show()
 
 
-# Plotting Results for epsilon = 1/k
 interval = 20000
 wins_interval = [0]
 losses_interval = [0]
 draws_interval = [0]
 
-for i in range(interval, num_episodes + interval, interval):
-    wins_interval.append(sum(wins_per_episode1[:i]))
-    losses_interval.append(i - sum(wins_per_episode1[:i]))
+for i in range(interval, num_of_episodes + interval, interval):
+    wins_interval.append(sum(wins_per_episode_config2[:i]))
+    losses_interval.append(i - sum(wins_per_episode_config2[:i]))
     draws_interval.append(0)
 
 plt.figure(figsize=(10, 6))
-plt.plot(range(0, num_episodes + 1, interval), wins_interval, label='Wins', marker='o', color='blue')
-plt.plot(range(0, num_episodes + 1, interval), losses_interval, label='Losses', marker='o', color='red')
-plt.plot(range(0, num_episodes + 1, interval), draws_interval, label='Draws', marker='o', color='green')
+plt.plot(range(0, num_of_episodes + 1, interval), wins_interval, label='Wins', marker='o', color='blue')
+plt.plot(range(0, num_of_episodes + 1, interval), losses_interval, label='Losses', marker='o', color='red')
+plt.plot(range(0, num_of_episodes + 1, interval), draws_interval, label='Draws', marker='o', color='green')
 plt.xlabel('Number of Episodes')
 plt.ylabel('Results')
 plt.title('Results for epsilon = 1/k Configuration')
@@ -436,21 +440,21 @@ plt.grid(True)
 plt.show()
 
 
-# Plotting Results for epsilon = e^(-k/1000)
+
 interval = 20000
 wins_interval = [0]
 losses_interval = [0]
 draws_interval = [0]
 
-for i in range(interval, num_episodes + interval, interval):
-    wins_interval.append(sum(wins_per_episode2[:i]))
-    losses_interval.append(i - sum(wins_per_episode2[:i]))
+for i in range(interval, num_of_episodes + interval, interval):
+    wins_interval.append(sum(wins_per_episode_config3[:i]))
+    losses_interval.append(i - sum(wins_per_episode_config3[:i]))
     draws_interval.append(0)
 
 plt.figure(figsize=(10, 6))
-plt.plot(range(0, num_episodes + 1, interval), wins_interval, label='Wins', marker='o', color='blue')
-plt.plot(range(0, num_episodes + 1, interval), losses_interval, label='Losses', marker='o', color='red')
-plt.plot(range(0, num_episodes + 1, interval), draws_interval, label='Draws', marker='o', color='green')
+plt.plot(range(0, num_of_episodes + 1, interval), wins_interval, label='Wins', marker='o', color='blue')
+plt.plot(range(0, num_of_episodes + 1, interval), losses_interval, label='Losses', marker='o', color='red')
+plt.plot(range(0, num_of_episodes + 1, interval), draws_interval, label='Draws', marker='o', color='green')
 plt.xlabel('Number of Episodes')
 plt.ylabel('Results')
 plt.title('Results for epsilon = e^(-k/1000) Configuration')
@@ -459,21 +463,20 @@ plt.grid(True)
 plt.show()
 
 
-# Plotting Results for epsilon = e^(-k/10000)
 interval = 20000
 wins_interval = [0]
 losses_interval = [0]
 draws_interval = [0]
 
-for i in range(interval, num_episodes + interval, interval):
-    wins_interval.append(sum(wins_per_episode3[:i]))
-    losses_interval.append(i - sum(wins_per_episode3[:i]))
+for i in range(interval, num_of_episodes + interval, interval):
+    wins_interval.append(sum(wins_per_episode_config4[:i]))
+    losses_interval.append(i - sum(wins_per_episode_config4[:i]))
     draws_interval.append(0)
 
 plt.figure(figsize=(10, 6))
-plt.plot(range(0, num_episodes + 1, interval), wins_interval, label='Wins', marker='o', color='blue')
-plt.plot(range(0, num_episodes + 1, interval), losses_interval, label='Losses', marker='o', color='red')
-plt.plot(range(0, num_episodes + 1, interval), draws_interval, label='Draws', marker='o', color='green')
+plt.plot(range(0, num_of_episodes + 1, interval), wins_interval, label='Wins', marker='o', color='blue')
+plt.plot(range(0, num_of_episodes + 1, interval), losses_interval, label='Losses', marker='o', color='red')
+plt.plot(range(0, num_of_episodes + 1, interval), draws_interval, label='Draws', marker='o', color='green')
 plt.xlabel('Number of Episodes')
 plt.ylabel('Results')
 plt.title('Results for epsilon = e^(-k/10000) Configuration')
@@ -484,10 +487,9 @@ plt.show()
 
 
 def plot_action_counts(action_counts, title):
-    valid_player_sums = list(range(12, 21))  # Valid player sums from 12 to 20
+    valid_player_sums = list(range(12, 21))  
     valid_dealer_cards = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A']
     
-    # Filter action counts to include only valid state-action pairs
     filtered_action_counts = {
         state_action: count for state_action, count in action_counts.items()
         if state_action[0][0] in valid_player_sums and state_action[0][1] in valid_dealer_cards
@@ -496,40 +498,39 @@ def plot_action_counts(action_counts, title):
     sorted_action_counts = sorted(filtered_action_counts.items(), key=lambda x: x[1], reverse=True)
     states_actions, counts = zip(*sorted_action_counts)
 
-    plt.figure(figsize=(20, 10))  # Increase figure size
+    plt.figure(figsize=(20, 10)) 
     plt.bar(range(len(states_actions)), counts)
     plt.xlabel('State-Action Pairs')
     plt.ylabel('Counts') 
     plt.title(title)
-    plt.tight_layout()  # Adjust layout
+    plt.tight_layout() 
     plt.show()
 
-# Plotting each configuration
-plot_action_counts(action_counts_explore, 'Counts of State-Action Pairs: epsilon = 0.1')
-plot_action_counts(action_counts_non_explore_1, 'Counts of State-Action Pairs: (epsilon = 1/k)')
-plot_action_counts(action_counts_non_explore_2, 'Counts of State-Action Pairs: (epsilon = e^(-k/1000))')
-plot_action_counts(action_counts_non_explore_3, 'Counts of State-Action Pairs: (epsilon = e^(-k/10000))')
+plot_action_counts(action_counts_config1, 'Counts of State-Action Pairs: epsilon = 0.1')
+plot_action_counts(action_counts_config2, 'Counts of State-Action Pairs: (epsilon = 1/k)')
+plot_action_counts(action_counts_config3, 'Counts of State-Action Pairs: (epsilon = e^(-k/1000))')
+plot_action_counts(action_counts_config4, 'Counts of State-Action Pairs: (epsilon = e^(-k/10000))')
 
 configurations = ['epsilon = 0.1', 'epsilon = 1/k', 'epsilon = (e^(-k/1000))', 'epsilon = (e^(-k/10000))']
-unique_pairs_counts = [unique_pairs_explore_refined, unique_pairs_non_explore_1_refined, unique_pairs_non_explore_2_refined, unique_pairs_non_explore_3_refined]
+unique_pairs_counts = [unique_pairs_config1_refined, unique_pairs_config2_refined, unique_pairs_config3_refined, unique_pairs_config4_refined]
 
 plt.figure(figsize=(10, 6))
 plt.bar(configurations, unique_pairs_counts, color=['blue', 'orange', 'green', 'red'])
 plt.xlabel('Algorithm Configurations')
 plt.ylabel('Number of Unique State-Action Pairs')
-plt.yticks(np.arange(0, max(unique_pairs_counts) + 50, 50))  # Set y-axis interval to 50
+plt.yticks(np.arange(0, max(unique_pairs_counts) + 50, 50)) 
 plt.title('Total Number of Unique State-Action Pairs Across Configurations')
 plt.show()
 
 def build_strategy_table(q_values, has_ace):
-    # Define the dealer cards and player sums
+    
     dealer_cards = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A']
     player_sums = list(range(20, 11, -1))
     
-    # Initialize the strategy table
+    
     strategy_table = {sum_: {dealer_card: '' for dealer_card in dealer_cards} for sum_ in player_sums}
 
-    # Fill the strategy table
+    
     for player_sum in player_sums:
         for dealer_card in dealer_cards:
             state = (player_sum, dealer_card, has_ace)
@@ -537,7 +538,7 @@ def build_strategy_table(q_values, has_ace):
                 best_action = max(q_values[state], key=q_values[state].get)
                 strategy_table[player_sum][dealer_card] = 'H' if best_action == 'HIT' else 'S'
             else:
-                strategy_table[player_sum][dealer_card] = 'N/A'  # If state is not in q_values
+                strategy_table[player_sum][dealer_card] = 'N/A'  
     
     return strategy_table
 
@@ -549,20 +550,19 @@ def print_strategy_table(strategy_table, title):
         actions_str = " | ".join(actions[dealer_card] for dealer_card in actions)
         print(f"    {player_sum}    | {actions_str}")
 
-# Generate strategy tables for each configuration
+
 configs = [
-    ("epsilon = 0.1", q_values_explore),
-    ("epsilon = 1/k", q_values_non_explore_1),
-    ("epsilon = e^(-k/1000)", q_values_non_explore_2),
-    ("epsilon = e^(-k/10000)", q_values_non_explore_3)
+    ("epsilon = 0.1", q_values_config1),
+    ("epsilon = 1/k", q_values_config2),
+    ("epsilon = e^(-k/1000)", q_values_config3),
+    ("epsilon = e^(-k/10000)", q_values_config4)
 ]
 
 for config_name, q_values in configs:
-    # Strategy tables for player with an Ace as 11
+    
     strategy_table_ace = build_strategy_table(q_values, has_ace=True)
     print_strategy_table(strategy_table_ace, f"Strategy Table with Ace as 11 - {config_name}")
     
-    # Strategy tables for player without an Ace as 11
+    
     strategy_table_no_ace = build_strategy_table(q_values, has_ace=False)
     print_strategy_table(strategy_table_no_ace, f"Strategy Table without Ace as 11 - {config_name}")
-    
