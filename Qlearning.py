@@ -1,10 +1,7 @@
 import random
 import numpy as np
 import math
-
-import random
-import numpy as np
-import math
+import matplotlib.pyplot as plt
 
 class Card:
     def __init__(self, rank, suit):
@@ -80,6 +77,21 @@ class BlackjackRound:
             return 'Loss'
         else:
             return 'Draw'
+        
+    def get_sum(self, cards):
+        total = 0
+        has_ace = False
+        for card in cards:
+            if card.rank in ['J', 'Q', 'K']:
+                total += 10
+            elif card.rank == 'A':
+                total += 11
+                has_ace = True
+            else:
+                total += int(card.rank)
+        if total > 21 and has_ace:
+            total -= 10
+        return total
 
     def get_state(self):
         player_sum = self.get_sum(self.player_cards)
@@ -102,6 +114,23 @@ class QLearning:
         self.alpha = alpha
         self.gamma = gamma  
         self.Q = {}  # Q-table
+
+    def choose_action(self, state):
+        if state not in self.q_values or not self.q_values[state]:
+            return np.random.choice(['HIT', 'STAND'])
+
+        if np.random.rand() < self.epsilon:
+            return np.random.choice(['HIT', 'STAND'])
+        else:
+            return max(self.q_values[state], key=self.q_values[state].get)
+
+    def initialize_Q_values(self):
+        ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+        suits = ['Spades', 'Clubs', 'Hearts', 'Diamonds']
+        for player_sum in range(12, 21):
+            for dealer_card in ranks[1:]:
+                state = (player_sum, dealer_card)
+                self.Q[state] = {Action.HIT: 0, Action.STAND: 0}
 
     def get_action(self, state):
         if state not in self.Q:
@@ -128,6 +157,21 @@ class QLearning:
         td_error = td_target - self.Q[state][action]
         self.Q[state][action] += self.alpha * td_error
 
+    def update_q_values(self, state, action, reward, next_state):
+        if state not in self.q_values:
+            self.q_values[state] = {'HIT': 0, 'STAND': 0}
+
+        if next_state not in self.q_values:
+            self.q_values[next_state] = {'HIT': 0, 'STAND': 0}
+
+        td_target = reward + self.gamma * max(self.Q[next_state].values())
+        td_error = td_target - self.Q[state][action]
+        self.Q[state][action] += self.alpha * td_error
+
+        max_next_action_value = max(self.q_values[next_state].values())
+
+        self.q_values[state][action] += self.alpha * (reward + self.gamma * max_next_action_value - self.q_values[state][action])
+
 
 
 alpha = 0.1
@@ -135,6 +179,13 @@ gamma = 1.0
 episode = 1
 # Different values of epsilon
 epsilon_values = [0.1, 1/episode, math.exp(-episode/1000), math.exp(-episode/10000)]
+
+# Define lists to store data for each configuration
+all_wins_data = []
+all_losses_data = []
+all_draws_data = []
+all_total_unique_pairs = []
+all_state_action_counts = []
 
 configuration = 1
 for epsilon in epsilon_values:
@@ -150,6 +201,14 @@ for epsilon in epsilon_values:
     draw_count = 0
     state_action_counts = {}
     unique_state_action_pairs = set()
+
+
+    wins_data = []
+    losses_data = []
+    draws_data = []
+    state_action_counts = {}
+    unique_state_action_pairs = set()
+
 
     for episode in range(100000):
         round = BlackjackRound()
@@ -205,13 +264,17 @@ for epsilon in epsilon_values:
         elif outcome == 'Loss':
             loss_count += 1
         elif outcome == 'Draw':
-            draw_count += 1
+            draw_count += 1            
 
         episode_rewards.append(reward)
         
         if (episode + 1) % 1000 == 0:
             avg_reward = np.mean(episode_rewards[-1000:])
             print(f"Episodes: {episode - 999}-{episode}, Average Reward: {avg_reward}, Wins: {win_count}, Losses: {loss_count}, Draws: {draw_count}")
+
+            wins_data.append(win_count)
+            losses_data.append(loss_count)
+            draws_data.append(draw_count)
             win_count = 0
             loss_count = 0
             draw_count = 0
@@ -226,3 +289,98 @@ for epsilon in epsilon_values:
     print("Estimated Q values for Epsilon {epsilon}:")
     for pair in unique_state_action_pairs:
         print(f"State: {pair[0]}, Action: {pair[1]}, Q-value: {q_learning_agent.Q[pair[0]][pair[1]]}")
+
+    all_wins_data.append(wins_data)
+    all_losses_data.append(losses_data)
+    all_draws_data.append(draws_data)
+    all_total_unique_pairs.append(len(unique_state_action_pairs))
+    all_state_action_counts.append(state_action_counts)
+
+# Function to plot wins, losses, and draws
+def plot_outcomes(wins_data, losses_data, draws_data, configuration):
+    episodes = range(1000, 100001, 1000)
+    plt.plot(episodes, wins_data, label='Wins')
+    plt.plot(episodes, losses_data, label='Losses')
+    plt.plot(episodes, draws_data, label='Draws')
+    plt.xlabel('Episodes')
+    plt.ylabel('Counts')
+    plt.title(f'Configuration:{configuration}')
+    plt.legend()
+    plt.show()
+
+# Plotting for each configuration
+for configuration in range(len(epsilon_values)):
+    plot_outcomes(all_wins_data[configuration], all_losses_data[configuration], all_draws_data[configuration], configuration + 1)
+
+# Plot the counts of each unique state-action pair on a bar chart sorted by highest count first
+for configuration in range(len(epsilon_values)):
+    state_action_counts = all_state_action_counts[configuration]
+    
+    # Flatten state-action pairs and counts into lists
+    counts = []
+    for count in state_action_counts.values():
+        counts.append(count)
+    
+    # Sort by counts
+    sorted_counts = sorted(counts, reverse=True)
+    
+    # Plotting
+    plt.figure(figsize=(12, 8))
+    plt.bar(range(len(sorted_counts)), sorted_counts)
+    plt.xlabel('State-Action Pairs')
+    plt.ylabel('Counts')
+    plt.title(f'State-Action Pair Counts for Configuration {configuration + 1}')
+    plt.show()
+
+# Plot the total number of unique state-action pairs as a bar chart across all configurations
+configurations = [str(i + 1) for i in range(len(epsilon_values))]
+plt.figure(figsize=(12, 8))
+plt.bar(configurations, all_total_unique_pairs)
+plt.xlabel('Configurations')
+plt.ylabel('Number of Unique State-Action Pairs')
+plt.title('Total Unique State-Action Pairs Across Configurations')
+plt.show()
+
+
+# Function to build and display the Blackjack Strategy table
+def build_blackjack_strategy_table(Q_values):
+    # Define ranks and suits
+    ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+    suits = ['Spades', 'Clubs', 'Hearts', 'Diamonds']
+    
+    # Initialize the strategy table
+    strategy_table = {}
+    
+    # Iterate over player's sum and dealer's visible card
+    for player_sum in range(20, 11, -1):
+        strategy_table[player_sum] = {}
+        for dealer_card in ranks[1:]:  # Exclude Ace for the dealer's card
+            state = (player_sum, dealer_card)
+            # Find the action with the highest Q-value in this state
+            best_action = max(Q_values[state], key=Q_values[state].get)
+            # Populate the cell of the strategy table
+            strategy_table[player_sum][dealer_card] = 'H' if best_action == Action.HIT else 'S'
+    
+    return strategy_table
+
+# Generate and display Blackjack Strategy tables for each configuration
+for configuration in range(len(epsilon_values)):
+    print(f"Blackjack Strategy Table for Configuration {configuration + 1}:")
+    
+    # Generate the strategy table for when the player is using an Ace as 11
+    strategy_table_with_ace = build_blackjack_strategy_table(all_state_action_counts[configuration])
+    print("Player's Ace as 11:")
+    print("Dealer's Card |", " | ".join(strategy_table_with_ace[20].keys()))
+    print("-" * (15 + 4 * len(strategy_table_with_ace[20])))
+    for player_sum in range(20, 11, -1):
+        print(f"Player's Sum {player_sum} |", " | ".join(strategy_table_with_ace[player_sum].values()))
+    print()
+    
+    # Generate the strategy table for when the player is not using an Ace as 11
+    strategy_table_without_ace = build_blackjack_strategy_table(all_state_action_counts[configuration])
+    print("Player's Ace as 1:")
+    print("Dealer's Card |", " | ".join(strategy_table_without_ace[20].keys()))
+    print("-" * (15 + 4 * len(strategy_table_without_ace[20])))
+    for player_sum in range(20, 11, -1):
+        print(f"Player's Sum {player_sum} |", " | ".join(strategy_table_without_ace[player_sum].values()))
+    print()
