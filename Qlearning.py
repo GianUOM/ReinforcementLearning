@@ -2,10 +2,6 @@ import random
 import numpy as np
 import math
 
-import random
-import numpy as np
-import math
-
 class Card:
     def __init__(self, rank, suit):
         self.rank = rank
