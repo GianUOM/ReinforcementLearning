@@ -68,10 +68,10 @@ class BlackjackRound:
         else:
             return 'Draw'
 
-def generate_state(player_sum, dealer_card, has_ace):
+def generateState(player_sum, dealer_card, has_ace):
     return (player_sum, dealer_card, has_ace)
 
-def choose_action(q_values, state, epsilon):
+def chooseAction(q_values, state, epsilon):
     if state not in q_values or not q_values[state]:
         return np.random.choice(['HIT', 'STAND'])
     if random.random() < epsilon:
@@ -79,12 +79,12 @@ def choose_action(q_values, state, epsilon):
     else:
         return max(q_values[state], key=q_values[state].get)
 
-def monte_carlo_exploring_starts(num_episodes):
+def monteCarloUsingExploringStarts(numberOfEpisodes):
     q_values = {}
-    for episode in range(1, num_episodes + 1):
+    for episode in range(1, numberOfEpisodes + 1):
         round = BlackjackRound()
         round.start()
-        state = generate_state(round.get_sum(round.player_cards), round.dealer_cards[0].rank, 'A' in [card.rank for card in round.player_cards])
+        state = generateState(round.get_sum(round.player_cards), round.dealer_cards[0].rank, 'A' in [card.rank for card in round.player_cards])
         episode_actions = []
         episode_states = []
         episode_rewards = []
@@ -92,7 +92,7 @@ def monte_carlo_exploring_starts(num_episodes):
         if round.get_sum(round.player_cards) in range(12, 21):
             action = np.random.choice(['HIT', 'STAND'])
         else:
-            action = choose_action(q_values, state, 1)  
+            action = chooseAction(q_values, state, 1)  
 
         episode_actions.append(action)
         episode_states.append(state)
@@ -117,14 +117,14 @@ def monte_carlo_exploring_starts(num_episodes):
                     episode_rewards.append(0)
                 break
 
-            state = generate_state(round.get_sum(round.player_cards), round.dealer_cards[0].rank, 'A' in [card.rank for card in round.player_cards])
+            state = generateState(round.get_sum(round.player_cards), round.dealer_cards[0].rank, 'A' in [card.rank for card in round.player_cards])
             episode_states.append(state)
 
             epsilon = 1 / episode
             if round.get_sum(round.player_cards) in range(12, 21):
-                action = choose_action(q_values, state, epsilon)
+                action = chooseAction(q_values, state, epsilon)
             else:
-                action = choose_action(q_values, state, 1)  
+                action = chooseAction(q_values, state, 1)  
             episode_actions.append(action)
 
         G = 0
@@ -140,16 +140,16 @@ def monte_carlo_exploring_starts(num_episodes):
 
     return q_values
 
-def monte_carlo_non_exploring_starts(num_episodes, alpha, epsilon_func):
+def monteCarloUsingNonExploringStarts(numberOfEpisodes, alpha, epsilon_func):
     q_values = {}
-    for episode in range(num_episodes):
+    for episode in range(numberOfEpisodes):
         round = BlackjackRound()
         round.start()
-        state = generate_state(round.get_sum(round.player_cards), round.dealer_cards[0].rank, 'A' in [card.rank for card in round.player_cards])
+        state = generateState(round.get_sum(round.player_cards), round.dealer_cards[0].rank, 'A' in [card.rank for card in round.player_cards])
         episode_actions = []
         episode_rewards = []
 
-        action = choose_action(q_values, state, epsilon_func(episode + 1))  
+        action = chooseAction(q_values, state, epsilon_func(episode + 1))  
         episode_actions.append(action)
 
         while True:
@@ -175,14 +175,14 @@ def monte_carlo_non_exploring_starts(num_episodes, alpha, epsilon_func):
                     episode_rewards.append(0)
                     break
 
-            next_state = generate_state(round.get_sum(round.player_cards), round.dealer_cards[0].rank, 'A' in [card.rank for card in round.player_cards])
+            next_state = generateState(round.get_sum(round.player_cards), round.dealer_cards[0].rank, 'A' in [card.rank for card in round.player_cards])
             state = next_state
 
-            action = choose_action(q_values, state, epsilon_func(episode + 1))  
+            action = chooseAction(q_values, state, epsilon_func(episode + 1))  
             episode_actions.append(action)
 
         for i in range(len(episode_actions)):
-            state_action = (state, episode_actions[i])
+            stateAction = (state, episode_actions[i])
             G = sum(episode_rewards[i:])
             if state not in q_values:
                 q_values[state] = {}
@@ -192,23 +192,23 @@ def monte_carlo_non_exploring_starts(num_episodes, alpha, epsilon_func):
 
     return q_values
 
-def run_episodes_and_extract_info(agent_function, num_episodes, alpha, epsilon_func):
+def extractingInfoThroughEpisodes(agent_function, numberOfEpisodes, alpha, epsilon_func):
     q_values = {}
-    episode_results = {'Win': [], 'Loss': [], 'Draw': []}
-    unique_state_action_pairs = set()
-    action_counts = {}
-    wins_per_episode = []
-    losses_per_episode = []
-    draws_per_episode = []
+    episodeResults = {'Win': [], 'Loss': [], 'Draw': []}
+    uniqueStateActionPairs = set()
+    actionCounts = {}
+    winsPerEpisode = []
+    lossesPerEpisode = []
+    drawsPerEpisode = []
 
-    for episode in range(1, num_episodes + 1):
+    for episode in range(1, numberOfEpisodes + 1):
         round = BlackjackRound()
         round.start()
-        state = generate_state(round.get_sum(round.player_cards), round.dealer_cards[0].rank, 'A' in [card.rank for card in round.player_cards])
+        state = generateState(round.get_sum(round.player_cards), round.dealer_cards[0].rank, 'A' in [card.rank for card in round.player_cards])
         episode_actions = []
         episode_rewards = []
 
-        action = choose_action(q_values, state, epsilon_func(episode))  
+        action = chooseAction(q_values, state, epsilon_func(episode))  
         episode_actions.append(action)
 
         while True:
@@ -234,14 +234,14 @@ def run_episodes_and_extract_info(agent_function, num_episodes, alpha, epsilon_f
                     episode_rewards.append(0)
                     break
 
-            next_state = generate_state(round.get_sum(round.player_cards), round.dealer_cards[0].rank, 'A' in [card.rank for card in round.player_cards])
+            next_state = generateState(round.get_sum(round.player_cards), round.dealer_cards[0].rank, 'A' in [card.rank for card in round.player_cards])
             state = next_state
 
-            action = choose_action(q_values, state, epsilon_func(episode))  
+            action = chooseAction(q_values, state, epsilon_func(episode))  
             episode_actions.append(action)
 
         for i in range(len(episode_actions)):
-            state_action = (state, episode_actions[i])
+            stateAction = (state, episode_actions[i])
             G = sum(episode_rewards[i:])
             if state not in q_values:
                 q_values[state] = {}
@@ -249,124 +249,124 @@ def run_episodes_and_extract_info(agent_function, num_episodes, alpha, epsilon_f
                 q_values[state][episode_actions[i]] = 0
             q_values[state][episode_actions[i]] += alpha * (G - q_values[state][episode_actions[i]])
 
-        episode_result = round.get_outcome()
-        episode_results[episode_result].append(1)
+        episodeResult = round.get_outcome()
+        episodeResults[episodeResult].append(1)
 
-        if episode_result == 'Win':
-            wins_per_episode.append(1)
-            losses_per_episode.append(0)
-            draws_per_episode.append(0)
-        elif episode_result == 'Loss':
-            wins_per_episode.append(0)
-            losses_per_episode.append(1)
-            draws_per_episode.append(0)
+        if episodeResult == 'Win':
+            winsPerEpisode.append(1)
+            lossesPerEpisode.append(0)
+            drawsPerEpisode.append(0)
+        elif episodeResult == 'Loss':
+            winsPerEpisode.append(0)
+            lossesPerEpisode.append(1)
+            drawsPerEpisode.append(0)
         else:
-            wins_per_episode.append(0)
-            losses_per_episode.append(0)
-            draws_per_episode.append(1)
+            winsPerEpisode.append(0)
+            lossesPerEpisode.append(0)
+            drawsPerEpisode.append(1)
 
-        unique_state_action_pairs.add(state_action)
+        uniqueStateActionPairs.add(stateAction)
 
-        if (state, action) in action_counts:
-            action_counts[(state, action)] += 1
+        if (state, action) in actionCounts:
+            actionCounts[(state, action)] += 1
         else:
-            action_counts[(state, action)] = 1
+            actionCounts[(state, action)] = 1
 
         if episode % 1000 == 0:
-            print(f"Episodes {episode-999}-{episode}: Wins - {sum(episode_results['Win'])}, Losses - {sum(episode_results['Loss'])}, Draws - {sum(episode_results['Draw'])}")
-            episode_results = {'Win': [], 'Loss': [], 'Draw': []}
+            print(f"Episodes {episode-999}-{episode}: Wins - {sum(episodeResults['Win'])}, Losses - {sum(episodeResults['Loss'])}, Draws - {sum(episodeResults['Draw'])}")
+            episodeResults = {'Win': [], 'Loss': [], 'Draw': []}
 
-    return wins_per_episode, losses_per_episode, draws_per_episode, sum(episode_results['Win']), sum(episode_results['Loss']), sum(episode_results['Draw']), len(unique_state_action_pairs), action_counts, q_values
+    return winsPerEpisode, lossesPerEpisode, drawsPerEpisode, sum(episodeResults['Win']), sum(episodeResults['Loss']), sum(episodeResults['Draw']), len(uniqueStateActionPairs), actionCounts, q_values
 
 
 
-num_episodes = 100000
-alpha = 0.05
-wins_per_episode_explore, losses_per_episode_explore, draws_per_episode_explore, wins_explore, losses_explore, draws_explore, unique_pairs_explore, action_counts_explore, q_values_explore = run_episodes_and_extract_info(monte_carlo_exploring_starts, num_episodes, alpha, lambda k: 1 / k)
+numberOfEpisodes = 100000
+alpha = 0.1
+winsPerEpisode_explore, lossesPerEpisode_explore, drawsPerEpisode_explore, winsExploring, lossesExploring, drawsExploring, uniquePairsExplored, actionCounts_explore, qValuesExploring = extractingInfoThroughEpisodes(monteCarloUsingExploringStarts, numberOfEpisodes, alpha, lambda k: 1 / k)
 
-num_episodes = 100000
-alpha = 0.05
-wins_per_episode1, losses_per_episode1, draws_per_episode1, wins_non_explore_1, losses_non_explore_1, draws_non_explore_1, unique_pairs_non_explore_1, action_counts_non_explore_1, q_values_non_explore_1 = run_episodes_and_extract_info(monte_carlo_non_exploring_starts, num_episodes, alpha, lambda k: 1 / k)
+numberOfEpisodes = 100000
+alpha = 0.1
+winsPerEpisode1, lossesPerEpisode1, drawsPerEpisode1, winsNonExploring1, lossesNonExploring1, drawsNonExploring1, uniquePairsNonExploring1, actionCountsNonExploring1, qValuesNonExploring1 = extractingInfoThroughEpisodes(monteCarloUsingNonExploringStarts, numberOfEpisodes, alpha, lambda k: 1 / k)
 
-num_episodes = 100000
-alpha = 0.05
-wins_per_episode2, losses_per_episode2, draws_per_episode2, wins_non_explore_2, losses_non_explore_2, draws_non_explore_2, unique_pairs_non_explore_2, action_counts_non_explore_2, q_values_non_explore_2 = run_episodes_and_extract_info(monte_carlo_non_exploring_starts, num_episodes, alpha, lambda k: np.exp(-k / 1000))
+numberOfEpisodes = 100000
+alpha = 0.1
+winsPerEpisode2, lossesPerEpisode2, drawsPerEpisode2, winsNonExploring2, lossesNonExploring2, drawsNonExploring2, uniquePairsNonExploring2, actionCountsNonExploring2, qValuesNonExploring2 = extractingInfoThroughEpisodes(monteCarloUsingNonExploringStarts, numberOfEpisodes, alpha, lambda k: np.exp(-k / 1000))
 
-num_episodes = 100000
-alpha = 0.05
-wins_per_episode3, losses_per_episode3, draws_per_episode3, wins_non_explore_3, losses_non_explore_3, draws_non_explore_3, unique_pairs_non_explore_3, action_counts_non_explore_3, q_values_non_explore_3 = run_episodes_and_extract_info(monte_carlo_non_exploring_starts, num_episodes, alpha, lambda k: np.exp(-k / 10000))
+numberOfEpisodes = 100000
+alpha = 0.1
+winsPerEpisode3, lossesPerEpisode3, drawsPerEpisode3, winsNonExploring3, lossesNonExploring3, drawsNonExploring3, uniquePairsNonExploring3, actionCountsNonExploring3, qValuesNonExploring3 = extractingInfoThroughEpisodes(monteCarloUsingNonExploringStarts, numberOfEpisodes, alpha, lambda k: np.exp(-k / 10000))
 
 print('-----------------------------------------------------------------------')
 print("\nResults for Exploring Starts:\n")
-print("Wins: ", wins_explore)
-print("Losses: ", losses_explore)
-print("Draws: ", draws_explore)
-print("Unique state-action pairs explored: ", unique_pairs_explore)
+print("Wins: ", winsExploring)
+print("Losses: ", lossesExploring)
+print("Draws: ", drawsExploring)
+print("Unique state-action pairs explored: ", uniquePairsExplored)
 print("\nCounts of state-action pair selections:")
-for state_action, count in action_counts_explore.items():
-    print(f"State-Action Pair: {state_action}, Count: {count}")
+for stateAction, count in actionCounts_explore.items():
+    print(f"State-Action Pair: {stateAction}, Count: {count}")
 print("\nEstimated Q values:")
-for state, actions in q_values_explore.items():
+for state, actions in qValuesExploring.items():
     for action, value in actions.items():
         print(f"State: {state}, Action: {action}, Q-value: {value}")
 
 print('-----------------------------------------------------------------------')
 print("\nResults for Non-exploring Starts with 𝜖 = 1/k:\n")
-print("Wins: ", wins_non_explore_1)
-print("Losses: ", losses_non_explore_1)
-print("Draws: ", draws_non_explore_1)
-print("Unique state-action pairs explored: ", unique_pairs_non_explore_1)
+print("Wins: ", winsNonExploring1)
+print("Losses: ", lossesNonExploring1)
+print("Draws: ", drawsNonExploring1)
+print("Unique state-action pairs explored: ", uniquePairsNonExploring1)
 print("\nCounts of state-action pair selections:")
-for state_action, count in action_counts_non_explore_1.items():
-    print(f"State-Action Pair: {state_action}, Count: {count}")
+for stateAction, count in actionCountsNonExploring1.items():
+    print(f"State-Action Pair: {stateAction}, Count: {count}")
 print("\nEstimated Q values:")
-for state, actions in q_values_non_explore_1.items():
+for state, actions in qValuesNonExploring1.items():
     for action, value in actions.items():
         print(f"State: {state}, Action: {action}, Q-value: {value}")
 
 print('-----------------------------------------------------------------------')
 print("\nResults for Non-exploring Starts with 𝜖 = e^(-k/1000):\n")
-print("Wins: ", wins_non_explore_2)
-print("Losses: ", losses_non_explore_2)
-print("Draws: ", draws_non_explore_2)
-print("Unique state-action pairs explored: ", unique_pairs_non_explore_2)
+print("Wins: ", winsNonExploring2)
+print("Losses: ", lossesNonExploring2)
+print("Draws: ", drawsNonExploring2)
+print("Unique state-action pairs explored: ", uniquePairsNonExploring2)
 print("\nCounts of state-action pair selections:")
-for state_action, count in action_counts_non_explore_2.items():
-    print(f"State-Action Pair: {state_action}, Count: {count}")
+for stateAction, count in actionCountsNonExploring2.items():
+    print(f"State-Action Pair: {stateAction}, Count: {count}")
 print("\nEstimated Q values:")
-for state, actions in q_values_non_explore_2.items():
+for state, actions in qValuesNonExploring2.items():
     for action, value in actions.items():
         print(f"State: {state}, Action: {action}, Q-value: {value}")
 
 print('-----------------------------------------------------------------------')
 print("\nResults for Non-exploring Starts with 𝜖 = e^(-k/10000):\n")
-print("Wins: ", wins_non_explore_3)
-print("Losses: ", losses_non_explore_3)
-print("Draws: ", draws_non_explore_3)
-print("Unique state-action pairs explored: ", unique_pairs_non_explore_3)
+print("Wins: ", winsNonExploring3)
+print("Losses: ", lossesNonExploring3)
+print("Draws: ", drawsNonExploring3)
+print("Unique state-action pairs explored: ", uniquePairsNonExploring3)
 print("\nCounts of state-action pair selections:")
-for state_action, count in action_counts_non_explore_3.items():
-    print(f"State-Action Pair: {state_action}, Count: {count}")
+for stateAction, count in actionCountsNonExploring3.items():
+    print(f"State-Action Pair: {stateAction}, Count: {count}")
 print("\nEstimated Q values:")
-for state, actions in q_values_non_explore_3.items():
+for state, actions in qValuesNonExploring3.items():
     for action, value in actions.items():
         print(f"State: {state}, Action: {action}, Q-value: {value}")
 
-def plot_results(wins_per_episode, losses_per_episode, draws_per_episode, num_episodes, title):
+def plot_results(winsPerEpisode, lossesPerEpisode, drawsPerEpisode, numberOfEpisodes, title):
     interval = 1000
-    wins_interval = []
-    losses_interval = []
-    draws_interval = []
+    winsInterval = []
+    lossesInterval = []
+    drawsInterval = []
 
-    for i in range(0, num_episodes, interval):
-        wins_interval.append(sum(wins_per_episode[i:i+interval]))
-        losses_interval.append(sum(losses_per_episode[i:i+interval]))
-        draws_interval.append(sum(draws_per_episode[i:i+interval]))
+    for i in range(0, numberOfEpisodes, interval):
+        winsInterval.append(sum(winsPerEpisode[i:i+interval]))
+        lossesInterval.append(sum(lossesPerEpisode[i:i+interval]))
+        drawsInterval.append(sum(drawsPerEpisode[i:i+interval]))
 
     plt.figure(figsize=(10, 6))
-    plt.plot(range(0, num_episodes, interval), wins_interval, label='Wins', marker='o', linestyle='-', color='blue')
-    plt.plot(range(0, num_episodes, interval), losses_interval, label='Losses', marker='o', linestyle='-', color='red')
-    plt.plot(range(0, num_episodes, interval), draws_interval, label='Draws', marker='o', linestyle='-', color='green')
+    plt.plot(range(0, numberOfEpisodes, interval), winsInterval, label='Wins', marker='o', linestyle='-', color='blue')
+    plt.plot(range(0, numberOfEpisodes, interval), lossesInterval, label='Losses', marker='o', linestyle='-', color='red')
+    plt.plot(range(0, numberOfEpisodes, interval), drawsInterval, label='Draws', marker='o', linestyle='-', color='green')
     plt.xlabel('Episodes')
     plt.ylabel('Counts')
     plt.title(title)
@@ -374,17 +374,17 @@ def plot_results(wins_per_episode, losses_per_episode, draws_per_episode, num_ep
     plt.grid(True)
     plt.show()
 
-def plot_action_counts(action_counts, title):
-    valid_player_sums = list(range(12, 21))  
-    valid_dealer_cards = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A']
+def plot_actionCounts(actionCounts, title):
+    validPlayerSums = list(range(12, 21))  
+    validDealerCards = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A']
 
-    filtered_action_counts = {
-        state_action: count for state_action, count in action_counts.items()
-        if state_action[0][0] in valid_player_sums and state_action[0][1] in valid_dealer_cards
+    filtered_actionCounts = {
+        stateAction: count for stateAction, count in actionCounts.items()
+        if stateAction[0][0] in validPlayerSums and stateAction[0][1] in validDealerCards
     }
 
-    sorted_action_counts = sorted(filtered_action_counts.items(), key=lambda x: x[1], reverse=True)
-    states_actions, counts = zip(*sorted_action_counts)
+    sorted_actionCounts = sorted(filtered_actionCounts.items(), key=lambda x: x[1], reverse=True)
+    states_actions, counts = zip(*sorted_actionCounts)
 
     plt.figure(figsize=(20, 10))  
     plt.bar(range(len(states_actions)), counts)
@@ -394,7 +394,7 @@ def plot_action_counts(action_counts, title):
     plt.tight_layout()  
     plt.show()
 
-def plot_unique_state_action_pairs(configurations, unique_pairs_counts):
+def plot_uniqueStateActionPairs(configurations, unique_pairs_counts):
     plt.figure(figsize=(10, 6))
     bars = plt.bar(configurations, unique_pairs_counts, color=['blue', 'orange', 'green', 'red'])
 
@@ -433,10 +433,10 @@ def print_strategy_table(strategy_table, title):
         actions_str = " | ".join(actions[dealer_card] for dealer_card in actions)
         print(f"    {player_sum}    | {actions_str}")
 
-def analyze_last_10000_episodes(wins_per_episode, losses_per_episode, draws_per_episode, title):
-    total_wins_last_10000 = sum(wins_per_episode[-10000:])
-    total_losses_last_10000 = sum(losses_per_episode[-10000:])
-    total_draws_last_10000 = sum(draws_per_episode[-10000:])
+def analyze_last_10000_episodes(winsPerEpisode, lossesPerEpisode, drawsPerEpisode, title):
+    total_wins_last_10000 = sum(winsPerEpisode[-10000:])
+    total_losses_last_10000 = sum(lossesPerEpisode[-10000:])
+    total_draws_last_10000 = sum(drawsPerEpisode[-10000:])
     print(f"{title} - Last 10000 Episodes: Wins = {total_wins_last_10000}, Losses = {total_losses_last_10000}, Draws = {total_draws_last_10000}")
     return total_wins_last_10000, total_losses_last_10000, total_draws_last_10000
 
@@ -461,23 +461,23 @@ def compare_dealer_advantage(configurations, advantages):
 
     print(f"\nThe algorithm that minimizes the dealer advantage the most is: {min_advantage_config}")
 
-plot_results(wins_per_episode_explore, losses_per_episode_explore, draws_per_episode_explore, num_episodes, 'Exploring Starts')
-plot_results(wins_per_episode1, losses_per_episode1, draws_per_episode1, num_episodes, "Non-exploring Starts (1/k)")
-plot_results(wins_per_episode2, losses_per_episode2, draws_per_episode2, num_episodes, "Non-exploring Starts (e^(-k/1000))")
-plot_results(wins_per_episode1, losses_per_episode3, draws_per_episode3, num_episodes, "Non-exploring Starts (e^(-k/10000))")
-plot_action_counts(action_counts_explore, 'Counts of State-Action Pairs: Exploring Starts')
-plot_action_counts(action_counts_non_explore_1, 'Counts of State-Action Pairs: Non-exploring Starts (1/k)')
-plot_action_counts(action_counts_non_explore_2, 'Counts of State-Action Pairs: Non-exploring Starts (e^(-k/1000))')
-plot_action_counts(action_counts_non_explore_3, 'Counts of State-Action Pairs: Non-exploring Starts (e^(-k/10000))')
+plot_results(winsPerEpisode_explore, lossesPerEpisode_explore, drawsPerEpisode_explore, numberOfEpisodes, 'Exploring Starts')
+plot_results(winsPerEpisode1, lossesPerEpisode1, drawsPerEpisode1, numberOfEpisodes, "Non-exploring Starts (1/k)")
+plot_results(winsPerEpisode2, lossesPerEpisode2, drawsPerEpisode2, numberOfEpisodes, "Non-exploring Starts (e^(-k/1000))")
+plot_results(winsPerEpisode1, lossesPerEpisode3, drawsPerEpisode3, numberOfEpisodes, "Non-exploring Starts (e^(-k/10000))")
+plot_actionCounts(actionCounts_explore, 'Counts of State-Action Pairs: Exploring Starts')
+plot_actionCounts(actionCountsNonExploring1, 'Counts of State-Action Pairs: Non-exploring Starts (1/k)')
+plot_actionCounts(actionCountsNonExploring2, 'Counts of State-Action Pairs: Non-exploring Starts (e^(-k/1000))')
+plot_actionCounts(actionCountsNonExploring3, 'Counts of State-Action Pairs: Non-exploring Starts (e^(-k/10000))')
 configurations = ['Exploring Starts', 'Non-exploring Starts (1/k)', 'Non-exploring Starts (e^(-k/1000))', 'Non-exploring Starts (e^(-k/10000))']
-unique_pairs_counts = [unique_pairs_explore, unique_pairs_non_explore_1, unique_pairs_non_explore_2, unique_pairs_non_explore_3]
-plot_unique_state_action_pairs(configurations, unique_pairs_counts)
+unique_pairs_counts = [uniquePairsExplored, uniquePairsNonExploring1, uniquePairsNonExploring2, uniquePairsNonExploring3]
+plot_uniqueStateActionPairs(configurations, unique_pairs_counts)
 
 configs = [
-    ("Exploring Starts", q_values_explore),
-    ("Non-exploring Starts with 𝜖 = 1/k", q_values_non_explore_1),
-    ("Non-exploring Starts with 𝜖 = e^(-k/1000)", q_values_non_explore_2),
-    ("Non-exploring Starts with 𝜖 = e^(-k/10000)", q_values_non_explore_3)
+    ("Exploring Starts", qValuesExploring),
+    ("Non-exploring Starts with 𝜖 = 1/k", qValuesNonExploring1),
+    ("Non-exploring Starts with 𝜖 = e^(-k/1000)", qValuesNonExploring2),
+    ("Non-exploring Starts with 𝜖 = e^(-k/10000)", qValuesNonExploring3)
 ]
 
 for config_name, q_values in configs:
@@ -488,15 +488,15 @@ for config_name, q_values in configs:
     print_strategy_table(strategy_table_no_ace, f"Strategy Table without Ace as 11 - {config_name}")
 
 
-total_wins_explore_last_10000, total_losses_explore_last_10000, total_draws_explore_last_10000 = analyze_last_10000_episodes(wins_per_episode_explore, losses_per_episode_explore, draws_per_episode_explore, 'Exploring Starts')
-total_wins_non_explore_1_last_10000, total_losses_non_explore_1_last_10000, total_draws_non_explore_1_last_10000 = analyze_last_10000_episodes(wins_per_episode1, losses_per_episode1, draws_per_episode1, 'Non-exploring Starts with 𝜖 = 1/k')
-total_wins_non_explore_2_last_10000, total_losses_non_explore_2_last_10000, total_draws_non_explore_2_last_10000 = analyze_last_10000_episodes(wins_per_episode2, losses_per_episode2, draws_per_episode2, 'Non-exploring Starts with 𝜖 = e^(-k/1000)')
-total_wins_non_explore_3_last_10000, total_losses_non_explore_3_last_10000, total_draws_non_explore_3_last_10000 = analyze_last_10000_episodes(wins_per_episode3, losses_per_episode3, draws_per_episode3, 'Non-exploring Starts with 𝜖 = e^(-k/10000)')
+total_winsExploring_last_10000, total_lossesExploring_last_10000, total_drawsExploring_last_10000 = analyze_last_10000_episodes(winsPerEpisode_explore, lossesPerEpisode_explore, drawsPerEpisode_explore, 'Exploring Starts')
+total_winsNonExploring1_last_10000, total_lossesNonExploring1_last_10000, total_drawsNonExploring1_last_10000 = analyze_last_10000_episodes(winsPerEpisode1, lossesPerEpisode1, drawsPerEpisode1, 'Non-exploring Starts with 𝜖 = 1/k')
+total_winsNonExploring2_last_10000, total_lossesNonExploring2_last_10000, total_drawsNonExploring2_last_10000 = analyze_last_10000_episodes(winsPerEpisode2, lossesPerEpisode2, drawsPerEpisode2, 'Non-exploring Starts with 𝜖 = e^(-k/1000)')
+total_winsNonExploring3_last_10000, total_lossesNonExploring3_last_10000, total_drawsNonExploring3_last_10000 = analyze_last_10000_episodes(winsPerEpisode3, lossesPerEpisode3, drawsPerEpisode3, 'Non-exploring Starts with 𝜖 = e^(-k/10000)')
 
-dealer_advantage_explore = calculate_dealer_advantage(total_wins_explore_last_10000, total_losses_explore_last_10000)
-dealer_advantage_non_explore_1 = calculate_dealer_advantage(total_wins_non_explore_1_last_10000, total_losses_non_explore_1_last_10000)
-dealer_advantage_non_explore_2 = calculate_dealer_advantage(total_wins_non_explore_2_last_10000, total_losses_non_explore_2_last_10000)
-dealer_advantage_non_explore_3 = calculate_dealer_advantage(total_wins_non_explore_3_last_10000, total_losses_non_explore_3_last_10000)
+dealer_advantage_explore = calculate_dealer_advantage(total_winsExploring_last_10000, total_lossesExploring_last_10000)
+dealer_advantage_non_explore_1 = calculate_dealer_advantage(total_winsNonExploring1_last_10000, total_lossesNonExploring1_last_10000)
+dealer_advantage_non_explore_2 = calculate_dealer_advantage(total_winsNonExploring2_last_10000, total_lossesNonExploring2_last_10000)
+dealer_advantage_non_explore_3 = calculate_dealer_advantage(total_winsNonExploring3_last_10000, total_lossesNonExploring3_last_10000)
 
 print(f"Exploring Starts - Dealer's Advantage: {dealer_advantage_explore:.4f}")
 print(f"Non-exploring Starts with 𝜖 = 1/k - Dealer's Advantage: {dealer_advantage_non_explore_1:.4f}")
