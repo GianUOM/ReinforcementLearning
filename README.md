@@ -25,7 +25,7 @@ A comparative study of **Q-learning**, **SARSA**, and **Monte Carlo** to train a
 
 ---
 
-## bjectives
+## Objectives
 
 - Learn optimal HIT/STAND strategy for Blackjack.
 - Compare different RL methods and exploration strategies.
