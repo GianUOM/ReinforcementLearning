@@ -1,58 +1,54 @@
-# Reinforcement Learning for Blackjack
+# Reinforcement Learning in Blackjack
 
-A comparative study of **Q-learning**, **SARSA**, and **Monte Carlo** to train agents to play **Blackjack** through self-play. Agents learn when to **HIT** or **STAND** using different learning methods and exploration strategies.
+This project compares three classic reinforcement learning algorithms — Monte Carlo, SARSA, and Q-Learning — to train agents to play Blackjack through self-play. It was implemented from scratch as part of an academic project at the University of Malta.
+
+---
+
+## Project Summary
+
+A custom Blackjack environment was created, and three agents were trained to learn HIT/STAND strategies using different learning methods and exploration strategies. Performance was analyzed across 100,000 episodes per method, with strategy tables, win/loss curves, and state-action exploration visualized.
 
 ---
 
 ## Algorithms Implemented
 
-### 1. Q-Learning (Off-policy TD Control)
-- Learns by estimating the **maximum future reward**.
-- Supports multiple ε-greedy exploration strategies:
-  - `ε = 0.1` (constant)
-  - `ε = 1/k` (decay)
-  - `ε = e^(-k/1000)`, `ε = e^(-k/10000)` (exponential decay)
+### Q-Learning (Off-policy)
+- Learns by estimating the maximum expected future reward for the next state, regardless of the agent's actual action.
+- Filename: `Qlearningnew.py`
 
-### 2. SARSA (On-policy TD Control)
-- Learns using the **actual next action** taken.
-- Trained with the same four ε strategies as Q-learning.
+### SARSA (On-policy)
+- Updates Q-values using the actual action taken in the next state, making it more conservative and stable early in training.
+- Filename: `Sarsanew.py`
 
-### 3. Monte Carlo (First-Visit)
-- Learns by **completing entire episodes** before updating.
-- Two approaches:
-  - **Exploring Starts (ES)** – Forces exploration from all states
-  - **Non-Exploring Starts (NES)** – Uses ε-greedy with decay
+### Monte Carlo (First-Visit)
+- Updates are made after full episodes based on first visits to state-action pairs.
+- Two approaches included:
+  - Exploring Starts (ES)
+  - Non-Exploring Starts (NES) with epsilon decay strategies
+- Filename: `monteCarlo.py`
 
 ---
 
-## Objectives
+## Key Features
 
-- Learn optimal HIT/STAND strategy for Blackjack.
-- Compare different RL methods and exploration strategies.
-- Evaluate using:
-  - Win/Loss/Draw statistics
-  - State-action space coverage
-  - Strategy tables
-  - Dealer advantage
-
----
-
-## Visualizations
-
-Each method includes:
-
-- **Win/Loss/Draw graphs**
-- **State-action pair bar plots**
-- **Strategy tables** (with/without Ace as 11)
-- **Dealer Advantage** comparison across methods
+- Custom-built Blackjack game environment (no external RL or Gym libraries)
+- Multiple epsilon decay strategies for exploration:
+  - ε = 0.1 (constant)
+  - ε = 1/k (inverse)
+  - ε = e^(-k/1000), ε = e^(-k/10000) (exponential)
+- Tracks win, loss, and draw counts
+- Tracks state-action pair visit counts
+- Generates strategy tables for hard and soft hands
+- Compares dealer advantage across all methods
 
 ---
 
-## 📁 Project Structure
+## Repository Contents
 
 ```bash
-Blackjack-RL
-├── Qlearningnew.py          # Q-learning implementation
-├── Sarsanew.py              # SARSA implementation
-├── main.py                  # Monte Carlo + evaluation/visualizations
-└── README.md                # You're here!
+ReinforcementLearning/
+├── Qlearningnew.py                           # Q-learning agent
+├── Sarsanew.py                               # SARSA agent
+├── monteCarlo.py                             # Monte Carlo agent and analysis
+├── ReinforcementLearningGianlucaAquilina...  # Final academic report (PDF)
+├── README.md                                 # Project documentation
